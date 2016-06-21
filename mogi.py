@@ -11,8 +11,6 @@ TODO:
 -add sphinx docstrings
 """
 import numpy as np
-import matplotlib.pyplot as plt
-import roipy.tools
 
 
 # =====================

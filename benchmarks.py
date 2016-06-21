@@ -3,7 +3,8 @@ Reproduce plots in Segall Ch7 or plots from original papers
 """
 import numpy as np
 import matplotlib.pyplot as plt
-import roipy.models as m
+from . import mogi
+from . import okada
 
 plt.rcParams['figure.figsize'] = (11,8.5)
 plt.rcParams['font.size'] = 14
@@ -32,7 +33,7 @@ def mogi_viscoshell(xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,dP=100e6,mu=30e9,
     for i,tn in enumerate(times):
         #print(tn)
         t = tn * tR
-        ur,uz = m.mogi.calc_viscoshell(x,y,t,xoff,yoff,d,a,b,dP,mu,nu,eta)
+        ur,uz = mogi.calc_viscoshell(x,y,t,xoff,yoff,d,a,b,dP,mu,nu,eta)
         plt.plot(x/d, uz/norm, label=str(tn))
         #print(uz.max())
         uzmax[i+1] = uz.max()
@@ -76,7 +77,7 @@ def mogi_viscoshell_dPt(P0=1.0,xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,mu=30e9,
         U = np.zeros_like(times)
         P = np.zeros_like(times)
         for i,t in enumerate(times):
-            ur,uz,p = m.mogi.calc_viscoshell_dPt(0,0,t,P0,ts)
+            ur,uz,p = mogi.calc_viscoshell_dPt(0,0,t,P0,ts)
             U[i] = uz
             P[i] = p
         ax1.plot(times/tR, P/P0, lw=2, label=str(t/tR))
@@ -121,7 +122,7 @@ def mogi_linmax(d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25):
     for color,time in zip(colors,tn):
         #ur,uz = m.mogi.calc_linmax(X,Y,time) #map view
         #ur,uz = m.mogi.forward_dp(x,y,0,0,d,a,dP,mu,nu) #elastic solution
-        ur,uz = m.mogi.calc_linmax(x,y,time,0,0,d,a,dP,mu,nu)
+        ur,uz = mogi.calc_linmax(x,y,time,0,0,d,a,dP,mu,nu)
         urmax.append(ur.max())
         uzmax.append(uz.max())
         ax.plot(x, uz, c=color, lw=2, label=str(time))
@@ -171,7 +172,7 @@ def mogi_genmax():
     fig = plt.figure()
     for i,t in enumerate(times):
         ax = fig.add_subplot(3,3,i+1)
-        dr,dz = m.mogi.calc_genmax(x,y,t)
+        dr,dz = mogi.calc_genmax(x,y,t)
         ax.plot(x/1000, dz,'-', lw=2, label=str(t))
         ax.plot(x/1000, dr,'--', lw=2, label=str(t))
         plt.tick_params(labelbottom=0, labeltop=0, labelleft=0, labelright=0)
@@ -206,7 +207,7 @@ def mogi():
     X,Y = np.meshgrid(x,y)
 
     # Run mogi model with delta volume input
-    dr,dz = m.mogi.forward(X,Y,**params)
+    dr,dz = mogi.forward(X,Y,**params)
     # Run mogi model with delta pressure input
     #dr,dz = m.mogi.forward_dp(X,Y,xoff=0,yoff=0,
     #                     depth=3e3,
@@ -256,9 +257,9 @@ def mctigue():
 
     # Run McTigue for first term solution (matches mogi)
     #(x,y,xoff=0,yoff=0,depth=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,terms=1, output='cyl'):
-    dr1,dz1 = m.mogi.calc_mctigue(X,Y,terms=1,output='cyl', **params)
+    dr1,dz1 = mogi.calc_mctigue(X,Y,terms=1,output='cyl', **params)
     # Two-term solution
-    dr2,dz2 = m.mogi.calc_mctigue(X,Y,terms=2,output='cyl', **params)
+    dr2,dz2 = mogi.calc_mctigue(X,Y,terms=2,output='cyl', **params)
 
     # Normalize results
     z1 = dz1[50, 50:] / dz1.max()
@@ -299,8 +300,8 @@ def okada():
     y = np.linspace(-25e3,25e3,n)
     X,Y = np.meshgrid(x,y)
 
-    #ux,uy,uz = m.okada.calc_okada(**params)
-    ux,uy,uz = m.okada.forward(X,Y,**params)
+    #ux,uy,uz = okada.calc_okada(**params)
+    ux,uy,uz = okada.forward(X,Y,**params)
 
     # resample grid for quiver plot
     nx = ny = 10
