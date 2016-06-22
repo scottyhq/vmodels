@@ -16,54 +16,18 @@ import numpy as np
 # =====================
 # Inverse Models
 # =====================
-def invert_fullres(X,Y,look,head,xcen,ycen,depth,dV,nu):
+def invert(xargs,xcen,ycen,depth,dV,nu):
     """
-    Adjust arguments of calc_mogi to work with scipy.omptimize.curvefit convention
-    Assumes UTM input for X and Y
+    Wrapper of mogi.forward to project to LOS and adjust arguments to work 
+    with scipy.omptimize.curvefit. Assumes UTM input for X and Y
     """
-    Xshift = X - xcen
-    Yshift = Y - ycen
+    X,Y,incidence,heading = xargs
+    ux, uy, uz = forward(X,Y,xcen,ycen,depth,dV,nu)
+    dataVec = np.dstack([ux, uy, uz])
+    cart2los = get_cart2los(incidence,heading)
+    los = -np.sum(dataVec * cart2los, axis=2)
 
-    # Convert to surface cylindrical coordinates
-    th, rho = cart2pol(Xshift,Yshift) # surface angle and radial distance
-    R = np.hypot(depth,rho) # radial distance from source
-
-    # Mogi displacement calculation
-    C = ((1-nu) / np.pi) * dV
-    ur = C * rho / R**3
-    uz = C * depth / R**3
-    ux, uy = pol2cart(th, ur)
-    dataVec = np.dstack([ux, uy, uz]) #shape = (1107, 890, 3)
-
-    # Get LOS transform
-    cart2los = get_cart2los(look,head)
-    los = np.sum(dataVec * cart2los, axis=2)
-
-    return los.ravel() #flattened arrays required by scipy.optimize
-
-def invert_resample(easting,northing,cart2los,xcen,ycen,depth,dV,nu=0.25):
-    """
-    Adjust arguments of mogi.forward() to work with scipy.omptimize.curvefit convention
-    Assumes UTM input for X and Y
-    """
-    Xshift = easting - xcen
-    Yshift = northing - ycen
-
-    # Convert to surface cylindrical coordinates
-    th, rho = cart2pol(Xshift,Yshift) # surface angle and radial distance
-    R = np.hypot(depth,rho) # radial distance from source
-
-    # Mogi displacement calculation
-    C = ((1-nu) / np.pi) * dV
-    ur = C * rho / R**3
-    uz = C * depth / R**3
-    ux, uy = pol2cart(th, ur)
-    dataVec = np.dstack([ux, uy, uz]) #shape = (1107, 890, 3)
-
-    los = np.sum(dataVec * cart2los, axis=2)
-
-    return los.ravel() #flattened arrays required by scipy.optimize
-
+    return los.ravel()
 
 
 
@@ -71,7 +35,7 @@ def invert_resample(easting,northing,cart2los,xcen,ycen,depth,dV,nu=0.25):
 # Forward Models
 # =====================
 
-def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6,nu=0.25,output='cyl'):
+def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6,nu=0.25):
     """
     Calculates surface deformation based on point source
 
@@ -89,17 +53,15 @@ def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6,nu=0.25,output='cyl'):
     d: depth to point (m)
     dV: change in volume (m^3)
     nu: poisson's ratio for medium
-    output: 'cart' (cartesian), 'cyl' (cylindrical)
 
     Returns:
     -------
-    (ux, uy, uz) if output='cart'
-    (ur,uz) if output='cyl'
+    (ux, uy, uz)
 
 
     Examples:
     --------
-    forward(0,0) #gives uz_max for default source parameters
+    
     """
     # Center coordinate grid on point source
     x = x - xoff
@@ -114,12 +76,8 @@ def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6,nu=0.25,output='cyl'):
     ur = C * rho / R**3    # horizontal displacement, m
     uz = C * d / R**3   # vertical displacement, m
 
-    # Convert surface cylindrical to cartesian
-    if output == 'cyl':
-        return ur, uz
-    else:
-        ux, uy = pol2cart(th, ur)
-        return ux, uy, uz
+    ux, uy = pol2cart(th, ur)
+    return ux, uy, uz
 
 
 def forward_dp(x,y,xoff=0,yoff=0,d=3e3,a=500,dP=100e6,mu=4e9,nu=0.25,output='cyl'):
