@@ -10,4 +10,4 @@ __lastupdate = '06/2016'
 from . import mogi,yang,okada
 from . import plot
 from . import benchmarks
-
+from . import util

@@ -11,20 +11,21 @@ TODO:
 -add sphinx docstrings
 """
 import numpy as np
-
+from . import util
 
 # =====================
 # Inverse Models
 # =====================
-def invert(xargs,xcen,ycen,depth,dV,nu):
+def invert(xargs,xcen,ycen,depth,dV):
     """
     Wrapper of mogi.forward to project to LOS and adjust arguments to work 
     with scipy.omptimize.curvefit. Assumes UTM input for X and Y
     """
+    #NOTE: nu fixed to default 0.25 by leaving out
     X,Y,incidence,heading = xargs
-    ux, uy, uz = forward(X,Y,xcen,ycen,depth,dV,nu)
+    ux, uy, uz = forward(X,Y,xcen,ycen,depth,dV)
     dataVec = np.dstack([ux, uy, uz])
-    cart2los = get_cart2los(incidence,heading)
+    cart2los = util.get_cart2los(incidence,heading)
     los = -np.sum(dataVec * cart2los, axis=2)
 
     return los.ravel()
@@ -35,7 +36,7 @@ def invert(xargs,xcen,ycen,depth,dV,nu):
 # Forward Models
 # =====================
 
-def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6,nu=0.25):
+def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6, nu=0.25):
     """
     Calculates surface deformation based on point source
 
@@ -68,7 +69,7 @@ def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6,nu=0.25):
     y = y - yoff
 
     # Convert to surface cylindrical coordinates
-    th, rho = cart2pol(x,y) # surface angle and radial distance
+    th, rho = util.cart2pol(x,y) # surface angle and radial distance
     R = np.hypot(d,rho) # radial distance from source
 
     # Mogi displacement calculation
@@ -76,24 +77,21 @@ def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6,nu=0.25):
     ur = C * rho / R**3    # horizontal displacement, m
     uz = C * d / R**3   # vertical displacement, m
 
-    ux, uy = pol2cart(th, ur)
+    ux, uy = util.pol2cart(th, ur)
     return ux, uy, uz
 
 
-def forward_dp(x,y,xoff=0,yoff=0,d=3e3,a=500,dP=100e6,mu=4e9,nu=0.25,output='cyl'):
+def forward_dp(x,y,xoff=0,yoff=0,d=3e3,a=500,dP=100e6,mu=4e9,nu=0.25):
     """
     dP instead of dV, NOTE: dV = pi * dP * a**3 / mu
     981747.7 ~ 1e6
     """
     dV = np.pi * dP * a**3 / mu
-    if output == 'cyl':
-        return forward(x,y,xoff,yoff,d,dV,nu,output='cyl')
-    else:
-        return forward(x,y,xoff,yoff,d,dV,nu)
+    return forward(x,y,xoff,yoff,d,dV,nu)
 
 
 
-def calc_linmax(x,y,tn,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25,output='cyl'):
+def calc_linmax(x,y,tn,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25):
     """ Solution for spherical source in a Maxwell Solid viscoelastic halfspace
     based on Bonafede & Ferrari 2009 (Equation 14).
 
@@ -124,7 +122,7 @@ def calc_linmax(x,y,tn,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25,outpu
     y = y - yoff
 
     # convert to surface cylindrical coordinates
-    th, r = cart2pol(x,y)
+    th, r = util.cart2pol(x,y)
     R = np.hypot(d,r)
 
     # Common variables
@@ -146,15 +144,15 @@ def calc_linmax(x,y,tn,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25,outpu
     print('ur_max = {:.4f}'.format(ur.max()))
 
     # Convert surface cylindrical to cartesian
-    if output == 'cart':
-        ux, uy = pol2cart(th, ur)
-        return ux, uy, uz
-    elif output == 'cyl':
-        return ur, uz
+    #if output == 'cart':
+    ux, uy = util.pol2cart(th, ur)
+    return ux, uy, uz
+    #elif output == 'cyl':
+    #    return ur, uz
 
 
-def calc_linmax_dPt(tn,dVdt,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,
-                         nu=0.25,output='cyl'):
+def calc_linmax_dPt(tn,dVdt,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9, 
+                    nu=0.25):
     """ Instead of constant pressure, have pressure determined by a constant
     supply rate of magma
 
@@ -175,7 +173,7 @@ def calc_linmax_dPt(tn,dVdt,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,
 
 
 def calc_genmax(x,y,t,xoff=0,yoff=0,d=4e3,dP=100e6,a=700,nu=0.25,G=30e9,
-                    mu1=0.5,eta=2e16,output='cyl',**kwargs):
+                mu1=0.5,eta=2e16,**kwargs):
     """ Solution for spherical source in a generalized maxwell viscoelastic
     halfspace based on Del Negro et al 2009.
 
@@ -242,7 +240,7 @@ def calc_genmax(x,y,t,xoff=0,yoff=0,d=4e3,dP=100e6,a=700,nu=0.25,G=30e9,
 
 
 def calc_mctigue(x,y,xoff=0,yoff=0,d=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,
-                 terms=1, output='cyl'):
+                 terms=1):
     """
     3d displacement field from dislocation point source (McTigue, 1987)
     Caution: analysis done in non-dimensional units!
@@ -274,7 +272,7 @@ def calc_mctigue(x,y,xoff=0,yoff=0,d=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,
     eps = a / d #NOTE eps = 0.5 # mctigue fig3
 
     # convert to surface cylindrical coordinates
-    th, r = cart2pol(x,y)
+    th, r = util.cart2pol(x,y)
     r = r / d #dimensionless radial distance
 
     # 1st order mctigue is essentially Mogi solution
@@ -296,15 +294,12 @@ def calc_mctigue(x,y,xoff=0,yoff=0,d=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,
     ur = ur * scale
 
     # Convert surface cylindrical to cartesian
-    if output == 'cart':
-        ux, uy = pol2cart(th, ur)
-        return ux, uy, uz
-    elif output == 'cyl':
-        return ur, uz
+    ux, uy = util.pol2cart(th, ur)
+    return ux, uy, uz
 
 
 def calc_viscoshell(x,y,t,xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,dP=100e6,
-                             mu=30e9,nu=0.25,eta=2e16,output='cyl'):
+                    mu=30e9,nu=0.25,eta=2e16):
     """ Spherical Source surronded by a viscoelastic shell in an elastic halfspace
     Derivation of equations 7.105 in Segall Ch.7 p245
     NOTE: good approximation if duration of intrusion << relation time tR
@@ -343,7 +338,7 @@ def calc_viscoshell(x,y,t,xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,dP=100e6,
 
 
 def calc_viscoshell_dPt(x,y,t,P0,tS,xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,
-                             mu=30e9,nu=0.25,eta=2e16,output='cyl'):
+                             mu=30e9,nu=0.25,eta=2e16):
     """
     Viscoelastic shell with a exponentially decaying pressure source
     from Segall 2010
@@ -386,43 +381,4 @@ def calc_viscoshell_dPt(x,y,t,P0,tS,xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,
 
 
 
-# ===================
-# Utility Functions
-# ===================
-def cart2pol(x1,x2):
-    #theta = np.arctan(x2/x1)
-    theta = np.arctan2(x2,x1) #sign matters -SH
-    r = np.hypot(x2,x1)
-    return theta, r
 
-
-def pol2cart(theta,r):
-    x1 = r * np.cos(theta)
-    x2 = r * np.sin(theta)
-    return x1,x2
-
-def shift_utm(X,Y,xcen,ycen):
-    ''' Avoid large numbers in UTM grid by creating local (0,0) origin '''
-    x0 = X.min()
-    y0 = Y.min()
-
-    X = X - x0
-    Y = Y - y0
-    xcen = xcen - x0
-    ycen = ycen - y0
-
-    return X,Y,xcen,ycen
-
-
-def get_cart2los(look,head):
-    ''' coefficients for projecting cartesian displacements into LOS vector '''
-    incidence = np.deg2rad(look)
-    heading = np.deg2rad(head)
-
-    EW2los = np.sin(heading) * np.sin(incidence)
-    NS2los = np.cos(heading) * np.sin(incidence)
-    Z2los = -np.cos(incidence)
-
-    cart2los = np.dstack([EW2los, NS2los, Z2los])
-
-    return cart2los
