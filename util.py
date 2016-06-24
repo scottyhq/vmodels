@@ -9,11 +9,32 @@ import numpy as np
 import rasterio
 
 
-def save_rasterio(data, profile):
+def world2rc(x,y,affine, inverse=False):
     '''
-    re-save array after manipulating with nupy
+    World coordinates (lon,lat) to image (row,col) center pixel coordinates
     '''
-    print('todo')
+    #T0 = src.meta['affine']
+    T0 = affine
+    T1 = T0 * rasterio.Affine.translation(0.5, 0.5)
+    rc2xy = lambda r, c: (c, r) * T1
+    # can probable simpligy,,, also int() acts like floor()
+    xy2rc = lambda x, y: [int(i) for i in [x, y] * ~T1][::-1] 
+
+    if inverse:
+        return rc2xy(y,x)
+    else:
+        return xy2rc(x,y)
+
+
+def save_rasterio(path, data, profile):
+    '''
+    save single band raster file
+    intended to use with load_rasterio() to open georeferenced data manipulate
+    with numpy and then resave modified data
+    '''
+    with rasterio.drivers():
+        with rasterio.open(path, 'w', **profile) as dst:
+            dst.write(data, 1) #single band
     
 
 def load_rasterio(path):
@@ -23,9 +44,6 @@ def load_rasterio(path):
     '''
     with rasterio.drivers():
         with rasterio.open(path, 'r') as src:
-            #im = src.read() #read all bands at once
-            #data = im.astype('f4')
-            #data[data==src.nodata]=np.nan
             data = src.read()
             meta = src.profile
             extent = src.bounds[::2] + src.bounds[1::2]
@@ -66,7 +84,7 @@ def calc_ramp(array, ramp='quadratic', custom_mask=None):
     y = Y.reshape((-1,1))
 
     # Work with numpy mask array
-    phs = ma.masked_invalid(array)
+    phs = np.ma.masked_invalid(array)
 
     if custom_mask != None:
         phs[custom_mask] = ma.masked

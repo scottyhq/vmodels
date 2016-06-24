@@ -5,6 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from . import mogi
 from . import okada
+from . import yang
+from . import plot
 
 plt.rcParams['figure.figsize'] = (11,8.5)
 plt.rcParams['font.size'] = 14
@@ -188,7 +190,7 @@ def mogi_genmax():
     plt.show()
 
 
-def mogi():
+def mogi_elastic():
     """
     Mogi Source in an elastic halfspace
     (Segall Figure 7.5)
@@ -215,7 +217,7 @@ def mogi():
     #                     a=500,
     #                     nu=0.25,
     #                     mu=4e9,
-    #                     output='cyl')
+    #                     )
 
     # Normalize results
     z = dz[50, 50:] / dz.max()
@@ -235,7 +237,7 @@ def mogi():
     plt.show()
 
 
-def mctigue():
+def mctigue_elastic():
     """
     Spherical Source in an elastic halfspace
     (Segall Figure 7.6B)
@@ -256,10 +258,10 @@ def mctigue():
     X,Y = np.meshgrid(x,y)
 
     # Run McTigue for first term solution (matches mogi)
-    #(x,y,xoff=0,yoff=0,depth=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,terms=1, output='cyl'):
-    dr1,dz1 = mogi.calc_mctigue(X,Y,terms=1,output='cyl', **params)
+    #(x,y,xoff=0,yoff=0,depth=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,terms=1):
+    dr1,dz1 = mogi.calc_mctigue(X,Y,terms=1, **params)
     # Two-term solution
-    dr2,dz2 = mogi.calc_mctigue(X,Y,terms=2,output='cyl', **params)
+    dr2,dz2 = mogi.calc_mctigue(X,Y,terms=2, **params)
 
     # Normalize results
     z1 = dz1[50, 50:] / dz1.max()
@@ -283,7 +285,7 @@ def mctigue():
     plt.show()
 
 
-def okada():
+def okada_elastic():
     """
     From script converted from matlab
     """
@@ -330,6 +332,45 @@ def okada():
     plt.legend()
 
     return ux, uy, uz
+
+
+def yang_elastic():
+    '''
+    Run Yang Elastic forward model
+    '''    
+    # Grid origin and resolution
+    x0=0
+    y0=0
+    dx=0.5
+    dy=0.5
+    ndat=100
+    mdat=100
+    xx = np.arange(x0, ndat*dx, dx)
+    yy = np.arange(y0, mdat*dy, dy)
+    x,y = np.meshgrid(xx,yy)
+    
+    #tp=np.zeros(x.shape) # no topo
+    params=np.zeros(8)
+    params[0]=20 # center x
+    params[1]=30 # center y
+    params[2]=15 # center depth (positive)
+    params[3]=10 # excess pressure, mu*10^(-5) Pa
+    params[4]=12 # major axis, km
+    params[5]=4 # minor axis, km
+    params[6]=np.deg2rad(30) # strike, rad  [0,2pi] CCW from N
+    params[7]=np.deg2rad(40) # plunge, rad  [0,pi]
+    
+    # Elastic constants (normalized)
+    #matrl = np.zeros(3)
+    #matrl[0]=1 #1st Lame constant
+    #matrl[1]=matrl[0] # shear modulus (2nd Lame constant)
+    #matrl[2]=0.25 # Poisson's ratio
+    
+    # Run the model
+    ux,uy,uz = yang.forward(x,y,*params)  
+    
+    plot.plot_yang(x,y,ux,uy,uz)
+   
 
 '''
 def okada_fialko():
@@ -399,6 +440,12 @@ def fialko():
     TODO
     """
     print('work in progress')
+
+
+
+
+
+
 
 
 # ==================
@@ -479,16 +526,3 @@ def mctigue_profiles(dz1,dr1,dz2,dr2, x, depth=3e3):
     plt.xlabel('normalized distance (r/d)')
     plt.ylabel('normalized displacement (u*(p*d/mu))')
     plt.show()
-
-
-
-
-if __name__ == '__main__':
-    print('Runnning all benchmarks')
-    #mogi()
-    #mctigue()
-    #mogi_linmax()
-    #mogi_genmax()
-    #mogi_viscoshell()
-    ux, uy, uz = okada()
-    print('Done!')

@@ -36,7 +36,7 @@ def invert(xargs,xcen,ycen,depth,dV):
 # Forward Models
 # =====================
 
-def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6, nu=0.25):
+def forward(x,y,xcen=0,ycen=0,d=3e3,dV=1e6, nu=0.25):
     """
     Calculates surface deformation based on point source
 
@@ -49,8 +49,8 @@ def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6, nu=0.25):
 
     Kwargs:
     -----------------
-    xoff: y-offset of point source epicenter (m)
-    yoff: y-offset of point source epicenter (m)
+    xcen: y-offset of point source epicenter (m)
+    ycen: y-offset of point source epicenter (m)
     d: depth to point (m)
     dV: change in volume (m^3)
     nu: poisson's ratio for medium
@@ -65,8 +65,8 @@ def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6, nu=0.25):
     
     """
     # Center coordinate grid on point source
-    x = x - xoff
-    y = y - yoff
+    x = x - xcen
+    y = y - ycen
 
     # Convert to surface cylindrical coordinates
     th, rho = util.cart2pol(x,y) # surface angle and radial distance
@@ -81,17 +81,17 @@ def forward(x,y,xoff=0,yoff=0,d=3e3,dV=1e6, nu=0.25):
     return ux, uy, uz
 
 
-def forward_dp(x,y,xoff=0,yoff=0,d=3e3,a=500,dP=100e6,mu=4e9,nu=0.25):
+def forward_dp(x,y,xcen=0,ycenn=0,d=3e3,a=500,dP=100e6,mu=4e9,nu=0.25):
     """
     dP instead of dV, NOTE: dV = pi * dP * a**3 / mu
     981747.7 ~ 1e6
     """
     dV = np.pi * dP * a**3 / mu
-    return forward(x,y,xoff,yoff,d,dV,nu)
+    return forward(x,y,xcen,ycen,d,dV,nu)
 
 
 
-def calc_linmax(x,y,tn,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25):
+def calc_linmax(x,y,tn,xcen=0,ycen=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25):
     """ Solution for spherical source in a Maxwell Solid viscoelastic halfspace
     based on Bonafede & Ferrari 2009 (Equation 14).
 
@@ -107,8 +107,8 @@ def calc_linmax(x,y,tn,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25):
 
     Keyword arguments:
     -----------------
-    xoff: y-offset of point source epicenter (m)
-    yoff: y-offset of point source epicenter (m)
+    xcen: y-offset of point source epicenter (m)
+    ycen: y-offset of point source epicenter (m)
     d: depth to point (m)
     dP: change in pressure at t=0 (Pa)
     K: short-term elastic incompressibility () NOTE=(5/3)mu in poisson approximation
@@ -118,8 +118,8 @@ def calc_linmax(x,y,tn,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25):
 
     """
     # center coordinate grid on point source
-    x = x - xoff
-    y = y - yoff
+    x = x - xcen
+    y = y - ycen
 
     # convert to surface cylindrical coordinates
     th, r = util.cart2pol(x,y)
@@ -151,7 +151,7 @@ def calc_linmax(x,y,tn,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25):
     #    return ur, uz
 
 
-def calc_linmax_dPt(tn,dVdt,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9, 
+def calc_linmax_dPt(tn,dVdt,xcen=0,ycen=0,d=3e3,a=500.0,dP=100e6,mu=4e9, 
                     nu=0.25):
     """ Instead of constant pressure, have pressure determined by a constant
     supply rate of magma
@@ -172,7 +172,7 @@ def calc_linmax_dPt(tn,dVdt,xoff=0,yoff=0,d=3e3,a=500.0,dP=100e6,mu=4e9,
     return uzmax
 
 
-def calc_genmax(x,y,t,xoff=0,yoff=0,d=4e3,dP=100e6,a=700,nu=0.25,G=30e9,
+def calc_genmax(x,y,t,xcen=0,ycen=0,d=4e3,dP=100e6,a=700,nu=0.25,G=30e9,
                 mu1=0.5,eta=2e16,**kwargs):
     """ Solution for spherical source in a generalized maxwell viscoelastic
     halfspace based on Del Negro et al 2009.
@@ -185,8 +185,8 @@ def calc_genmax(x,y,t,xoff=0,yoff=0,d=4e3,dP=100e6,a=700,nu=0.25,G=30e9,
 
     Keyword arguments:
     -----------------
-    xoff: y-offset of point source epicenter (m)
-    yoff: y-offset of point source epicenter (m)
+    xcen: y-offset of point source epicenter (m)
+    ycen: y-offset of point source epicenter (m)
     d: depth to point (m)
     dV: change in volume (m^3)
     K: bulk modulus (constant b/c incompressible)
@@ -200,8 +200,8 @@ def calc_genmax(x,y,t,xoff=0,yoff=0,d=4e3,dP=100e6,a=700,nu=0.25,G=30e9,
     """
     #WARNING: mu0 != 0
     # center coordinate grid on point source
-    x = x - xoff
-    y = y - yoff
+    x = x - xcen
+    y = y - ycen
 
     # convert to surface cylindrical coordinates
     #th, r = cart2pol(x,y)
@@ -239,7 +239,7 @@ def calc_genmax(x,y,t,xoff=0,yoff=0,d=4e3,dP=100e6,a=700,nu=0.25,G=30e9,
 
 
 
-def calc_mctigue(x,y,xoff=0,yoff=0,d=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,
+def calc_mctigue(x,y,xcen=0,ycen=0,d=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,
                  terms=1):
     """
     3d displacement field from dislocation point source (McTigue, 1987)
@@ -249,8 +249,8 @@ def calc_mctigue(x,y,xoff=0,yoff=0,d=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,
 
     Keyword arguments:
     ------------------
-    xoff: y-offset of point source epicenter (m)
-    yoff: y-offset of point source epicenter (m)
+    xcen: y-offset of point source epicenter (m)
+    ycen: y-offset of point source epicenter (m)
     d: depth to point (m)
     rad: chamber radius (m)
     dV: change in volume (m^3)
@@ -264,8 +264,8 @@ def calc_mctigue(x,y,xoff=0,yoff=0,d=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,
     NOTE: eps**6 term only significant if eps > 0.5
     """
     # center coordinate grid on point source
-    x = x - xoff
-    y = y - yoff
+    x = x - xcen
+    y = y - ycen
 
     # dimensionless scaling term
     scale = dP * d / mu
@@ -298,7 +298,7 @@ def calc_mctigue(x,y,xoff=0,yoff=0,d=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,
     return ux, uy, uz
 
 
-def calc_viscoshell(x,y,t,xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,dP=100e6,
+def calc_viscoshell(x,y,t,xcen=0,ycen=0,d=4e3,a=1000.0,b=1200.0,dP=100e6,
                     mu=30e9,nu=0.25,eta=2e16):
     """ Spherical Source surronded by a viscoelastic shell in an elastic halfspace
     Derivation of equations 7.105 in Segall Ch.7 p245
@@ -337,7 +337,7 @@ def calc_viscoshell(x,y,t,xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,dP=100e6,
     return ur, uz
 
 
-def calc_viscoshell_dPt(x,y,t,P0,tS,xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,
+def calc_viscoshell_dPt(x,y,t,P0,tS,xcen=0,ycen=0,d=4e3,a=1000.0,b=1200.0,
                              mu=30e9,nu=0.25,eta=2e16):
     """
     Viscoelastic shell with a exponentially decaying pressure source

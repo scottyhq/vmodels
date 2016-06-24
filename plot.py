@@ -3,37 +3,12 @@
 Plotting files to accompany vmodels (mogi, yang, okada)
 Created on Tue Jun 21 14:59:15 2016
 
+NOTE: Currently set up for plotting Okada
+
 @author: scott
 """
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import numpy as np
-
-
-
-def get_cart2los(inc, ald, x):
-    '''
-    NOTE: possible sign convention issues with this function
-    '''
-    # x is data array
-    # converted to LOS
-    # los = data.dot(cart2los) * 1e2 # maybe use numpy.tensordot? not sure...
-    # For now fake it:
-    look = np.deg2rad(inc) * np.ones_like(x)  # incidence
-    # heading (degreees clockwise from north)
-    head = np.deg2rad(ald) * np.ones_like(x)
-    # NOTE: matlab code default is -167 'clockwise from north' (same as hannsen text fig 5.1)
-    # This is for descending envisat beam 2, asizmuth look direction (ALD) is
-    # perpendicular to heading (-77)
-
-    # however, make_los.pl generates unw file with [Incidence, ALD], ALD for ascending data is 77
-    # make_los.pl defines "(alpha) azimuth pointing of s/c"
-    EW2los = np.sin(head) * np.sin(look)
-    NS2los = np.cos(head) * np.sin(look)
-    Z2los = -np.cos(look)
-    # NOTE: negative here implies uplift=positive in LOS
-    cart2los = -np.dstack([EW2los, NS2los, Z2los])
-
-    return cart2los
 
 
 
@@ -262,3 +237,43 @@ def plot_profile(ind,ux,uy,uz,los,axis=0):
     plt.title('Vertical vs. Horizontal Displacements')
     plt.show()
     '''
+  
+#From Yang 
+'''
+def plot_los(x,y,los):
+    plt.figure()
+    plt.imshow(los.reshape(x.shape), origin='lower', extent=[x.min(), x.max(), y.min(), y.max()])
+    plt.colorbar()
+    plt.title('Yang LOS [cm]')
+    plt.xlabel('EW Distance [km]')
+    plt.ylabel('NS Distance [km')    
+    plt.show()
+'''  
+
+def plot_yang(x,y,ux,uy,uz): 
+    # Reshape output and subsample for plotting quiver
+    '''
+    dhx=np.round(ndat / 10)
+    dhy=np.round(mdat / 10)
+    xsub=x[:-1:dhx,:-1:dhy]
+    ysub=y[:-1:dhx,:-1:dhy]
+    uxsub = ux[0:-1:dhx,0:-1:dhy]     
+    uysub = uy[0:-1:dhx,0:-1:dhy]
+    '''
+
+    # Simpler: Just take every ten points
+    #xsub = xsub[:,:,10]
+    nx = 10
+    ny = 10
+    
+    # Plot model
+    #plt.figure()
+    #plt.pcolor(yz)
+    plt.imshow(uz, origin='lower', extent=[x.min(), x.max(), y.min(), y.max()])
+    #plt.imshow(uz, origin='lower')
+    cb = plt.colorbar()
+    cb.set_label('cm')
+    plt.quiver(x[::ny,::ny], y[::nx,::ny], ux[::nx,::ny], uy[::nx,::ny])
+    plt.title('Yang Uz & Ur Surface Deformation')
+    plt.xlabel('EW Distance [km]')
+    plt.ylabel('NS Distance [km')
