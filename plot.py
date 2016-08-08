@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-
 def plot_fault(fig, strike=None, delta=None, length=None, width=None, xcen=None, ycen=None, **kwargs):
     ''' matlab way to project fault plane onto surface'''
     # XB = [] #lists for multiple faults in same domain
@@ -55,6 +54,62 @@ def plot_los_indicator(ax, ald):
     # ax1.annotate('LOS', (x0,y0), xytext=(x0+dx,x0+dy), xycoords='axes fraction', textcoords='axes fraction',
     # arrowprops=dict(width=1,frac=0.3,headwidth=5,facecolor='black'),
     # fontweight='bold') # NOTE: imshow origin has effect on this
+
+def plot_data_model_residual(data, model, extent, row, northing,
+                             vmin=None, vmax=None, unit='cm', point=None,
+                             xlim=None, ylim=None, scale_residual=False):
+    '''
+    Data. Model, Residual with EW profile
+    '''
+    cmap = 'bwr'
+    extent = np.array(extent)/1e3
+    northing = northing/1e3
+
+    fig, axes = plt.subplots(2, 2, figsize=(10,10))
+    ax = axes.flat[0]
+    im = ax.imshow(data, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
+    ax.axhline(northing, color='k')
+    ax.set_title('Data [{}]'.format(unit))
+    cb = plt.colorbar(im, ax=ax, orientation='vertical')
+    plt.grid(True)
+
+    ax = axes.flat[1]
+    im = ax.imshow(model, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
+    ax.axhline(northing, color='m')
+    ax.set_title('Model [{}]'.format(unit))
+    cb = plt.colorbar(im, ax=ax, orientation='vertical')
+    plt.grid(True)
+
+    ax = axes.flat[2]
+    if scale_residual:
+        im = ax.imshow(data-model, extent=extent, cmap=cmap) #Autoscale Residual
+    else:
+        im = ax.imshow(data-model, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
+
+    ax.set_title('Residual [{}]'.format(unit))
+    ax.set_xlabel('Easting [km]')
+    ax.set_ylabel('Northing [km]')
+    cb = plt.colorbar(im, ax=ax, orientation='vertical')
+    plt.grid(True)
+
+    # Label Summit
+    for ax in axes.flat[:3]:
+        if point:
+            ax.plot(point[0]/1e3,point[1]/1e3,'k^',scalex=False,scaley=False)
+        if xlim:
+            ax.set_xlim(xlim)
+        if ylim:
+            ax.set_ylim(ylim)
+
+    ax = axes.flat[3]
+    eastings = np.linspace(extent[0], extent[1], data.shape[1])
+    ax.plot(eastings, data[row],'ko', mfc='none', label='data')
+    ax.plot(eastings, model[row],'m-', lw=2, label='model')
+    ax.set_xlabel('Easting [m]')
+    ax.axhline(0, color='k')
+    plt.legend(loc='upper right')
+    plt.grid(True)
+    plt.show()
 
 
 def plot_components(x, y, ux, uy, uz, los, params, profile=False):
@@ -237,8 +292,8 @@ def plot_profile(ind,ux,uy,uz,los,axis=0):
     plt.title('Vertical vs. Horizontal Displacements')
     plt.show()
     '''
-  
-#From Yang 
+
+#From Yang
 '''
 def plot_los(x,y,los):
     plt.figure()
@@ -246,18 +301,18 @@ def plot_los(x,y,los):
     plt.colorbar()
     plt.title('Yang LOS [cm]')
     plt.xlabel('EW Distance [km]')
-    plt.ylabel('NS Distance [km')    
+    plt.ylabel('NS Distance [km')
     plt.show()
-'''  
+'''
 
-def plot_yang(x,y,ux,uy,uz): 
+def plot_yang(x,y,ux,uy,uz):
     # Reshape output and subsample for plotting quiver
     '''
     dhx=np.round(ndat / 10)
     dhy=np.round(mdat / 10)
     xsub=x[:-1:dhx,:-1:dhy]
     ysub=y[:-1:dhx,:-1:dhy]
-    uxsub = ux[0:-1:dhx,0:-1:dhy]     
+    uxsub = ux[0:-1:dhx,0:-1:dhy]
     uysub = uy[0:-1:dhx,0:-1:dhy]
     '''
 
@@ -265,7 +320,7 @@ def plot_yang(x,y,ux,uy,uz):
     #xsub = xsub[:,:,10]
     nx = 10
     ny = 10
-    
+
     # Plot model
     #plt.figure()
     #plt.pcolor(yz)

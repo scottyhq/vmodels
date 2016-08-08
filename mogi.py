@@ -18,7 +18,7 @@ from . import util
 # =====================
 def invert(xargs,xcen,ycen,depth,dV):
     """
-    Wrapper of mogi.forward to project to LOS and adjust arguments to work 
+    Wrapper of mogi.forward to project to LOS and adjust arguments to work
     with scipy.omptimize.curvefit. Assumes UTM input for X and Y
     """
     #NOTE: nu fixed to default 0.25 by leaving out
@@ -30,7 +30,22 @@ def invert(xargs,xcen,ycen,depth,dV):
 
     return los.ravel()
 
+def invert_dipole(xargs,xcen,ycen,depth,dV,xcen1,ycen1,depth1,dV1):
+    """
+    Wrapper of mogi.forward to project to LOS and adjust arguments to work
+    with scipy.omptimize.curvefit. Assumes UTM input for X and Y
+    """
+    #NOTE: nu fixed to default 0.25 by leaving out
+    X,Y,incidence,heading = xargs
+    ux, uy, uz = forward(X,Y,xcen,ycen,depth,dV)
+    #ux1, uy1, uz1 = forward(X,Y,xcen1,ycen1,depth1,dV1)
+    # Fix vertical alignment
+    ux1, uy1, uz1 = forward(X,Y,xcen,ycen,depth1,dV1)
+    dataVec = np.dstack([ux+ux1, uy+uy1, uz+uz1])
+    cart2los = util.get_cart2los(incidence,heading)
+    los = -np.sum(dataVec * cart2los, axis=2)
 
+    return los.ravel()
 
 # =====================
 # Forward Models
@@ -62,7 +77,7 @@ def forward(x,y,xcen=0,ycen=0,d=3e3,dV=1e6, nu=0.25):
 
     Examples:
     --------
-    
+
     """
     # Center coordinate grid on point source
     x = x - xcen
@@ -151,7 +166,7 @@ def calc_linmax(x,y,tn,xcen=0,ycen=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25):
     #    return ur, uz
 
 
-def calc_linmax_dPt(tn,dVdt,xcen=0,ycen=0,d=3e3,a=500.0,dP=100e6,mu=4e9, 
+def calc_linmax_dPt(tn,dVdt,xcen=0,ycen=0,d=3e3,a=500.0,dP=100e6,mu=4e9,
                     nu=0.25):
     """ Instead of constant pressure, have pressure determined by a constant
     supply rate of magma
@@ -378,7 +393,10 @@ def calc_viscoshell_dPt(x,y,t,P0,tS,xcen=0,ycen=0,d=4e3,a=1000.0,b=1200.0,
 
     return ur, uz, P
 
+def dP2dV(dP,a,mu=30e9):
+    dV = (np.pi * dP * a**3) / mu
+    return dV
 
-
-
-
+def dV2dP(dV,a,mu=30e9):
+    dP = (dV * mu) / (np.pi * a**3)
+    return dP
