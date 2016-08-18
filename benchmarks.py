@@ -15,7 +15,7 @@ plt.style.use('seaborn-white')
 # =====================
 # Benchmarks
 # =====================
-def mogi_viscoshell(xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,dP=100e6,mu=30e9,
+def mogi_viscoshell(xcen=0,ycen=0,d=4e3,a=1000.0,b=1200.0,dP=100e6,mu=30e9,
                     nu=0.25,eta=2e16):
     """
     Mogi surrounded by viscoelastic shell in an elastic half-space
@@ -35,7 +35,7 @@ def mogi_viscoshell(xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,dP=100e6,mu=30e9,
     for i,tn in enumerate(times):
         #print(tn)
         t = tn * tR
-        ur,uz = mogi.calc_viscoshell(x,y,t,xoff,yoff,d,a,b,dP,mu,nu,eta)
+        ur,uz = mogi.calc_viscoshell(x,y,t,xcen,ycen,d,a,b,dP,mu,nu,eta)
         plt.plot(x/d, uz/norm, label=str(tn))
         #print(uz.max())
         uzmax[i+1] = uz.max()
@@ -59,7 +59,7 @@ def mogi_viscoshell(xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,dP=100e6,mu=30e9,
     plt.suptitle('Viscoelastic Shell Benchmark: Segall Figure 7.38')
 
 
-def mogi_viscoshell_dPt(P0=1.0,xoff=0,yoff=0,d=4e3,a=1000.0,b=1200.0,mu=30e9,
+def mogi_viscoshell_dPt(P0=1.0,xcen=0,ycen=0,d=4e3,a=1000.0,b=1200.0,mu=30e9,
                      nu=0.25,eta=2e16):
     """
     Mogi surrounded by viscoelastic shell in an elastic half-space with an
@@ -153,8 +153,8 @@ def mogi_genmax():
     (Del Negro 2009 Fig 2)
     """
     # Set parameters (p.301)
-    params = dict(xoff = 0,
-                  yoff = 0,
+    params = dict(xcen = 0,
+                  ycen = 0,
                   d = 4e3, #m
                   dP = 100e6, #Pa
                   a = 700, #m
@@ -196,8 +196,8 @@ def mogi_elastic():
     (Segall Figure 7.5)
     """
     # Set parameters
-    params = dict(xoff = 0,
-                yoff = 0,
+    params = dict(xcen = 0,
+                ycen = 0,
                 d = 3e3, #m
                 dV = 1e6, #m^3
                 nu = 0.25)
@@ -209,15 +209,8 @@ def mogi_elastic():
     X,Y = np.meshgrid(x,y)
 
     # Run mogi model with delta volume input
-    dr,dz = mogi.forward(X,Y,**params)
-    # Run mogi model with delta pressure input
-    #dr,dz = m.mogi.forward_dp(X,Y,xoff=0,yoff=0,
-    #                     depth=3e3,
-    #                     dP=10e6,
-    #                     a=500,
-    #                     nu=0.25,
-    #                     mu=4e9,
-    #                     )
+    dx,dy,dz = mogi.forward(X,Y,**params)
+    dr = np.hypot(dx,dy)
 
     # Normalize results
     z = dz[50, 50:] / dz.max()
@@ -243,8 +236,8 @@ def mctigue_elastic():
     (Segall Figure 7.6B)
     """
     # Set parameters
-    params = dict(xoff = 0,
-                  yoff = 0,
+    params = dict(xcen = 0,
+                  ycen = 0,
                   d = 3e3,
                   dP = 10e6,
                   a = 1500.0,
@@ -258,7 +251,7 @@ def mctigue_elastic():
     X,Y = np.meshgrid(x,y)
 
     # Run McTigue for first term solution (matches mogi)
-    #(x,y,xoff=0,yoff=0,depth=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,terms=1):
+    #(x,y,xcen=0,ycen=0,depth=3e3,dP=10e6,a=1500.0,nu=0.25,mu=4e9,terms=1):
     dr1,dz1 = mogi.calc_mctigue(X,Y,terms=1, **params)
     # Two-term solution
     dr2,dz2 = mogi.calc_mctigue(X,Y,terms=2, **params)
@@ -290,7 +283,7 @@ def okada_elastic():
     From script converted from matlab
     """
     # Set parameters
-    params = dict(xoff=0, yoff=0,
+    params = dict(xcen=0, ycen=0,
             depth=5e3, length=1e3, width=1e3,
             slip=0.0, opening=10.0,
             strike=0.0, dip=0.0, rake=0.0,
@@ -337,7 +330,7 @@ def okada_elastic():
 def yang_elastic():
     '''
     Run Yang Elastic forward model
-    '''    
+    '''
     # Grid origin and resolution
     x0=0
     y0=0
@@ -348,7 +341,7 @@ def yang_elastic():
     xx = np.arange(x0, ndat*dx, dx)
     yy = np.arange(y0, mdat*dy, dy)
     x,y = np.meshgrid(xx,yy)
-    
+
     #tp=np.zeros(x.shape) # no topo
     params=np.zeros(8)
     params[0]=20 # center x
@@ -359,18 +352,18 @@ def yang_elastic():
     params[5]=4 # minor axis, km
     params[6]=np.deg2rad(30) # strike, rad  [0,2pi] CCW from N
     params[7]=np.deg2rad(40) # plunge, rad  [0,pi]
-    
+
     # Elastic constants (normalized)
     #matrl = np.zeros(3)
     #matrl[0]=1 #1st Lame constant
     #matrl[1]=matrl[0] # shear modulus (2nd Lame constant)
     #matrl[2]=0.25 # Poisson's ratio
-    
+
     # Run the model
-    ux,uy,uz = yang.forward(x,y,*params)  
-    
+    ux,uy,uz = yang.forward(x,y,*params)
+
     plot.plot_yang(x,y,ux,uy,uz)
-   
+
 
 '''
 def okada_fialko():
@@ -382,8 +375,8 @@ def okada_fialko():
     """
     # Set parameters
     params = dict(U = -10.0, # opening [m] NOTE: negative
-                  #xoff = -1e3, # offset
-                  #yoff = 0, # offset
+                  #xcen = -1e3, # offset
+                  #ycen = 0, # offset
                   nu = 0.25, # poisson ratio
                   delta = 0.001, # dip angle (set very close to zero to avoid numerical issue)
                   d = 5e3,  # depth to bottom [m]

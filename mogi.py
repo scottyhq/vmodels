@@ -47,6 +47,31 @@ def invert_dipole(xargs,xcen,ycen,depth,dV,xcen1,ycen1,depth1,dV1):
 
     return los.ravel()
 
+def invert_dipole_nuisance(xargs,xcen,ycen,depth,dV,xcen1,ycen1,depth1,dV1,rampx,rampy,dc):
+    """
+    Wrapper of mogi.forward to project to LOS and adjust arguments to work
+    with scipy.omptimize.curvefit. Assumes UTM input for X and Y
+
+    Add nuisance parameters: ramp in x, ramp in y, dc offset
+    My suspicion is this is not a good idea since the ramps can counteract
+    differences in viewing geometry, which are probably real!
+    """
+    #NOTE: nu fixed to default 0.25 by leaving out
+    X,Y,incidence,heading = xargs
+
+    ux, uy, uz = forward(X,Y,xcen,ycen,depth,dV)
+
+    #ux1, uy1, uz1 = forward(X,Y,xcen1,ycen1,depth1,dV1)
+    # Fix vertical alignment
+    ux1, uy1, uz1 = forward(X,Y,xcen,ycen,depth1,dV1)
+
+    dataVec = np.dstack([ux+ux1, uy+uy1, uz+uz1])
+    cart2los = util.get_cart2los(incidence,heading)
+
+    los = -np.sum(dataVec * cart2los, axis=2) + rampx*X + rampy*Y + dc
+
+    return los.ravel()
+
 # =====================
 # Forward Models
 # =====================
@@ -93,7 +118,8 @@ def forward(x,y,xcen=0,ycen=0,d=3e3,dV=1e6, nu=0.25):
     uz = C * d / R**3   # vertical displacement, m
 
     ux, uy = util.pol2cart(th, ur)
-    return ux, uy, uz
+    #return ux, uy, uz #returns tuple
+    return np.array([ux,uy,uz])
 
 
 def forward_dp(x,y,xcen=0,ycenn=0,d=3e3,a=500,dP=100e6,mu=4e9,nu=0.25):
@@ -161,7 +187,9 @@ def calc_linmax(x,y,tn,xcen=0,ycen=0,d=3e3,a=500.0,dP=100e6,mu=4e9,nu=0.25):
     # Convert surface cylindrical to cartesian
     #if output == 'cart':
     ux, uy = util.pol2cart(th, ur)
-    return ux, uy, uz
+    return np.array([ux, uy, uz])
+    # returning numpy array allows scaling as:
+    #ux,uy,uz = forward(**) * 1e2 + 0.1
     #elif output == 'cyl':
     #    return ur, uz
 
