@@ -122,7 +122,7 @@ def forward(x,y,xcen=0,ycen=0,d=3e3,dV=1e6, nu=0.25):
     return np.array([ux,uy,uz])
 
 
-def forward_dp(x,y,xcen=0,ycenn=0,d=3e3,a=500,dP=100e6,mu=4e9,nu=0.25):
+def forward_dp(x,y,xcen=0,ycen=0,d=3e3,a=500,dP=100e6,mu=4e9,nu=0.25):
     """
     dP instead of dV, NOTE: dV = pi * dP * a**3 / mu
     981747.7 ~ 1e6

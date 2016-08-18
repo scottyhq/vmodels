@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_fault(fig, strike=None, delta=None, length=None, width=None, xcen=None, ycen=None, **kwargs):
+def plot_fault(axes, strike=None, dip=None, length=None, width=None, xcen=None, ycen=None, **kwargs):
     ''' matlab way to project fault plane onto surface'''
     # XB = [] #lists for multiple faults in same domain
     # YB = []
@@ -21,7 +21,7 @@ def plot_fault(fig, strike=None, delta=None, length=None, width=None, xcen=None,
     coss = np.cos(np.deg2rad(strike))
     Lx = 0.5 * length * sins
     Ly = 0.5 * length * coss
-    W = width * np.cos(np.deg2rad(delta))
+    W = width * np.cos(np.deg2rad(dip))
 
     # Concatenate coordinates
     xb = np.array([-Lx + W * coss, -Lx, Lx, Lx + W * coss, -Lx + W * coss]) + xcen
@@ -34,8 +34,8 @@ def plot_fault(fig, strike=None, delta=None, length=None, width=None, xcen=None,
     yb = yb * 1e-3
 
     # put it on the plots!
-    for ax in fig.get_axes():
-        ax.plot(xb, yb, 'w-', lw=2)
+    for ax in axes:
+        ax.plot(xb, yb, 'k-', lw=2)
 
 
 def plot_los_indicator(ax, ald):
@@ -112,7 +112,7 @@ def plot_data_model_residual(data, model, extent, row, northing,
     plt.show()
 
 
-def plot_components(x, y, ux, uy, uz, los, params, profile=False):
+def plot_components(x, y, ux, uy, uz, params=None, profile=False, vmin=None, vmax=None):
     '''
     show components of deformation, along with projection into LOS
     NOTE: also would be cool to plot 3D surface!
@@ -121,7 +121,7 @@ def plot_components(x, y, ux, uy, uz, los, params, profile=False):
     cmap = 'bwr'
     # Convert to km and cm for ploting
     x, y = np.array([x, y]) * 1e-3
-    ux, uy, uz, los = np.array([ux, uy, uz, los]) * 1e2
+    ux, uy, uz = np.array([ux, uy, uz]) * 1e2
 
     # step size for quiver plot resampling
     nx = 20
@@ -131,41 +131,23 @@ def plot_components(x, y, ux, uy, uz, los, params, profile=False):
                                 subplot_kw=dict(aspect=1.0, adjustable='box-forced'),
                                 sharex=True, sharey=True, figsize=(17, 6))  # fig_kw
 
-    extent = [x.min(), x.max(), y.min(), y.max()]
-    # plt.locator_params(tight=True, nbins=4) #control number of easting/northing ticks
-    # sc = ax.scatter(x_km,y_km,c=data,cmap=plt.cm.bwr) #colormap not centered on zero
-    # norm = MidpointNormalize(midpoint=0)
-    # sc = ax.scatter(x_km,y_km,c=data,cmap=plt.cm.bwr,norm=norm)
-    # im = ax.imshow(uz)
-    # im = ax.pcolor(x,y,uz)
-    im = ax.imshow(uz, extent=extent, cmap=cmap)
-    # ax.quiver(x[::nx,::ny], y[::nx,::ny], ux[::nx,::ny], uy[::nx,::ny])
-    # #vector sum - show in second figure
+    extent = [x.min(), x.max(), y.min(), y.max()] #left, right, bottom, top
+
+    im = ax.imshow(uz, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
     ax.set_title('Vertical Displacement, Uz')
     ax.set_xlabel('EW Distance [km]')
     ax.set_ylabel('NS Distance [km]')
-    # , pad=0.1) #ticks=MaxNLocator(nbins=5) #5 ticks only)
     cb = plt.colorbar(im, ax=ax, orientation='horizontal')
     cb.set_label('cm')
 
-    # NOTE: look into code to see how error and wgt are determined..
-    # sc1 = ax1.scatter(x_km,y_km,c=err,cmap=plt.cm.Reds)
-    # im1 = ax1.imshow(ux)
-    # im1 = ax1.pcolor(x,y,ux)
-    im1 = ax1.imshow(ux, extent=extent, cmap=cmap)
+    im1 = ax1.imshow(ux, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
     ax1.quiver(x[::nx, ::ny], y[::nx, ::ny], ux[::nx, ::ny], np.zeros_like(uy)[::nx, ::ny])
     ax1.set_title('EW Displacement, Ux')
     cb1 = plt.colorbar(im1, ax=ax1, orientation='horizontal')  # , pad=0.1)
     cb1.set_label('cm')
 
-    # sc2 = ax2.scatter(x_km,y_km,c=wgt,cmap=plt.cm.Blues, norm=LogNorm())
-    # cb2 = plt.colorbar(sc2, ax=ax2, orientation='horizontal', pad=0.1)
-    # sc2 = ax2.scatter(x_km,y_km,c=wgt,cmap=plt.cm.Blues)
-    # im2 = ax2.imshow(uy)
-    # im2 = ax2.pcolor(x,y,uy)
-    im2 = ax2.imshow(uy, extent=extent, cmap=cmap)
-    ax2.quiver(x[::nx, ::ny], y[::nx, ::ny],
-               np.zeros_like(ux)[::nx, ::ny], uy[::nx, ::ny])
+    im2 = ax2.imshow(uy, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
+    ax2.quiver(x[::nx, ::ny], y[::nx, ::ny], np.zeros_like(ux)[::nx, ::ny], uy[::nx, ::ny])
     cb2 = plt.colorbar(im2, ax=ax2, orientation='horizontal')  # , pad=0.1)
     ax2.set_title('NS Displacement, Uy')
     cb2.set_label('cm')
@@ -175,7 +157,8 @@ def plot_components(x, y, ux, uy, uz, los, params, profile=False):
         a.axhline(linestyle=':', color='w')
         a.axvline(linestyle=':', color='w')
 
-    plot_fault(fig, **params)
+    if params:
+        plot_fault((ax, ax1, ax2), **params)
 
     plt.suptitle('Components of Deformation', fontsize=16, fontweight='bold')
 

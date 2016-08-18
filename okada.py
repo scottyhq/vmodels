@@ -25,7 +25,7 @@
 %	   WIDTH  : fault width in the DIP direction (WIDTH > 0)
 %	   RAKE   : direction the hanging wall moves during rupture, measured relative
 %	            to the fault STRIKE (-180 to 180).
-%	   SLIP   : dislocation in RAKE direction (length unit)
+%	   SLIP   : dislocation in RAKE direction (length unit) (left-lateral is positive)
 %	   OPEN   : dislocation in tensile component (same unit as SLIP)
 %
 %	returns the following variables (same matrix size as E and N):
@@ -41,9 +41,9 @@ import numpy as np
 eps = 1e-14 #
 
 # Match input variable order as closely as possible
-#def calc_mogi(x,y,xoff=0,yoff=0,d=3e3,dV=1e6,nu=0.25,output='cyl'):
+#def calc_mogi(x,y,xcen=0,yoff=0,d=3e3,dV=1e6,nu=0.25,output='cyl'):
 #def forward(E,N,DEPTH,STRIKE,DIP,LENGTH,WIDTH,RAKE,SLIP,OPEN):
-def forward(x, y, xoff=0, yoff=0,
+def forward(x, y, xcen=0, yoff=0,
             depth=5e3, length=1e3, width=1e3, 
             slip=0.0, opening=10.0, 
             strike=0.0, dip=0.0, rake=0.0,
@@ -53,7 +53,7 @@ def forward(x, y, xoff=0, yoff=0,
     '''
     e = x
     n = y
-    x = x - xoff
+    x = x - xcen
     y = y - yoff    
 
     strike = np.deg2rad(strike)
@@ -282,7 +282,7 @@ def benchmark(inc=23.0, ald=-77.0, wavelength=5.66):
     x,y = np.meshgrid(xvec,yvec)
 
     # Run the model
-    params = dict(x=x, y=y, xoff=0, yoff=0,
+    params = dict(x=x, y=y, xcen=0, yoff=0,
             depth=5e3, length=1e3, width=1e3, 
             slip=0.0, opening=0.0, 
             strike=0.0, dip=0.0, rake=0.0,
@@ -295,7 +295,7 @@ def benchmark(inc=23.0, ald=-77.0, wavelength=5.66):
 
     # Plots - NOTE: not working... need to fix!
     # Quick Fix: Change some variable names for the plots
-    params['xcen'] = params['xoff']
+    params['xcen'] = params['xcen']
     params['ycen'] = params['yoff']
     params['delta'] = params['dip']
     params['U'] = params['opening']

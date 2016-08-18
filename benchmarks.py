@@ -278,34 +278,80 @@ def mctigue_elastic():
     plt.show()
 
 
-def okada_elastic():
+def okada_elastic(example='sill'):
     """
-    From script converted from matlab
+    Possible examples: sill, dyke, strikeslip, thrust, normal
     """
-    # Set parameters
-    params = dict(xcen=0, ycen=0,
-            depth=5e3, length=1e3, width=1e3,
-            slip=0.0, opening=10.0,
-            strike=0.0, dip=0.0, rake=0.0,
-            nu=0.25)
-
+    # Set parameters (all strikes to North)
+    if example == 'sill':
+        params = dict(xcen=0, ycen=0,
+                depth=5e3, length=1e3, width=1e3,
+                slip=0.0, opening=10.0,
+                strike=0.0, dip=0.0, rake=0.0,
+                nu=0.25)
+    elif example == 'dyke':
+        params = dict(xcen=0, ycen=0,
+                depth=5e3, length=1e3, width=1e3,
+                slip=0.0, opening=10.0,
+                strike=0.0, dip=90.0, rake=0.0,
+                nu=0.25)
+    elif example == 'strikeslip':
+        params = dict(xcen=0, ycen=0,
+                depth=5e3, length=1e3, width=1e3,
+                slip=-10.0, opening=0.0,
+                strike=0.0, dip=90.0, rake=0.0,
+                nu=0.25)
+    #elif example == 'sic':
+    #    params = dict(xcen=0, ycen=0,
+    #            depth=1e-3, length=70e3, width=15e3, #surface rupture
+    #            slip=1.0, opening=0.0,
+    #            strike=90.0, dip=89.99, rake=0.0,
+    #            nu=0.27)
+    # #north-south orientation, dipping 30 E, must set rake westward thrust
+    # I think it is counter clock wise positive relative to stike
+    elif example == 'thrust': 
+        params = dict(xcen=0, ycen=0,
+                depth=5e3, length=1e3, width=1e3,
+                slip=10.0, opening=0.0,
+                strike=0.0, dip=30.0, rake=90.0,
+                nu=0.25)
+    elif example == 'normal': #Note change in sign for slip
+        params = dict(xcen=0, ycen=0,
+                depth=5e3, length=1e3, width=1e3,
+                slip=-10.0, opening=0.0,
+                strike=0.0, dip=60.0, rake=90.0,
+                nu=0.25)
+    elif example == 'mario': #right-lateral, strike at 45
+        params = dict(xcen=0, ycen=0,
+                depth=5e3, length=10e3, width=3e3,
+                slip=-10.0, opening=0.0,
+                strike=45.0, dip=90.0, rake=0.0,
+                nu=0.25)
     # Make grid NOTE: odd number so that center is symmetrical
     n = 201
+    mid = int(n/2) #profile position
     x = np.linspace(-25e3,25e3,n)
-    y = np.linspace(-25e3,25e3,n)
+    y = np.linspace(25e3,-25e3,n)
+    #x = np.linspace(-100e3,100e3,n) #to compare with Fialko's sic default
+    #y = np.linspace(100e3,-100e3,n) #need negative numbers to south!
     X,Y = np.meshgrid(x,y)
+    extent=np.array([x.min(), x.max(), y.min(), y.max()])/1e3 #left, right, bottom, top
 
-    #ux,uy,uz = okada.calc_okada(**params)
     ux,uy,uz = okada.forward(X,Y,**params)
 
     # resample grid for quiver plot
     nx = ny = 10
 
     plt.figure()
-    im = plt.imshow(uz, extent=[-25, 25, -25, 25])
+    im = plt.imshow(uz, extent=extent)
     plt.quiver(X[::nx, ::ny]/1e3, Y[::nx, ::ny]/1e3,
                ux[::nx, ::ny], uy[::nx, ::ny],
                 units='x', color='w')
+    
+    plt.axhline(y[mid]/1e3, color='k')
+    plt.axvline(x[mid]/1e3, color='r', linestyle='dashed')
+    plt.axhline(y[mid]/1e3, color='b', linestyle='dotted', lw=2)
+    
     plt.title('Okada profiles')
     plt.xlabel('Easting [km]')
     plt.ylabel('Northing [km]')
@@ -314,10 +360,10 @@ def okada_elastic():
 
     # make sure profile looks OK
     plt.figure()
-    mid = int(n/2)
-    plt.plot(x/1e3,uz[:,mid], label='vertical')
-    plt.plot(x/1e3,uy[:,mid], label='ux')
-    plt.plot(x/1e3,ux[mid,:], 'ro', label='uy', markevery=3)
+    plt.plot(x/1e3,uz[mid,:], 'k-', lw=2, label='vertical')
+    plt.plot(x/1e3,ux[mid,:], 'b:', lw=2, label='ux', markevery=3)
+    plt.plot(y/1e3,uy[:,mid], 'r--', lw=2, label='uy')
+    
     plt.axhline(color='k')
     plt.axvline(color='k')
     #plt.axhline(0.5, color='k', linestyle='dashed')
