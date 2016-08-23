@@ -29,6 +29,22 @@ def invert(xargs,xcen,ycen,depth,dV):
     los = -np.sum(dataVec * cart2los, axis=2)
 
     return los.ravel()
+    
+
+def invert_varres(xargs,xcen,ycen,depth,dV):
+    """
+    Wrapper of mogi.forward to project to LOS and adjust arguments to work
+    with scipy.omptimize.curvefit. Assumes UTM input for X and Y
+    """
+    #NOTE: nu fixed to default 0.25 by leaving out
+    X,Y,EW2los,NS2los,Z2los = xargs
+    ux, uy, uz = forward(X,Y,xcen,ycen,depth,dV)
+    dataVec = np.dstack([ux, uy, uz])
+    cart2los = np.dstack([EW2los, NS2los, Z2los])
+    los = -np.sum(dataVec * cart2los, axis=2)
+
+    return los.ravel()
+
 
 def invert_dipole(xargs,xcen,ycen,depth,dV,xcen1,ycen1,depth1,dV1):
     """
