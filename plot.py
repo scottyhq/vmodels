@@ -12,10 +12,7 @@ import numpy as np
 
 
 def plot_fault(axes, strike=None, dip=None, length=None, width=None, xcen=None, ycen=None, **kwargs):
-    ''' matlab way to project fault plane onto surface'''
-    # XB = [] #lists for multiple faults in same domain
-    # YB = []
-
+    ''' Project fault plane onto surface'''
     # Project fault coordinates onto surface
     sins = np.sin(np.deg2rad(strike))
     coss = np.cos(np.deg2rad(strike))
@@ -26,16 +23,27 @@ def plot_fault(axes, strike=None, dip=None, length=None, width=None, xcen=None, 
     # Concatenate coordinates
     xb = np.array([-Lx + W * coss, -Lx, Lx, Lx + W * coss, -Lx + W * coss]) + xcen
     yb = np.array([-Ly - W * sins, -Ly, Ly, Ly - W * sins, -Ly - W * sins]) + ycen
-    # XB.append(xb)
-    # YB.append(yb)
 
-    # scale for plotting
+    # scale for plotting (km)
     xb = xb * 1e-3
     yb = yb * 1e-3
 
+    end1x = (sins * length/2 * 1e-3)
+    end1y = (coss * length/2 * 1e-3)
+
     # put it on the plots!
     for ax in axes:
-        ax.plot(xb, yb, 'k-', lw=2)
+        ax.plot(xb, yb, 'k-', lw=2, scalex=False, scaley=False)
+        ax.plot(end1x,end1y,'ko',mfc='none', scalex=False, scaley=False) #stirke direction indicator
+        #ax.plot([xcen, ], [ycen, ])# add tick at midpoint indicating dip
+        # multiple distance times direction perpendicular to stike
+
+def plot_fault3d(axes, strike=None, dip=None, length=None, width=None, xcen=None, ycen=None, **kwargs):
+    ''' Rotatable fault in 3d'''
+    from mpl_toolkits.mplot3d import Axes3D
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    print('todo')
 
 
 def plot_los_indicator(ax, ald):
@@ -109,10 +117,11 @@ def plot_data_model_residual(data, model, extent, row, northing,
     ax.axhline(0, color='k')
     plt.legend(loc='upper right')
     plt.grid(True)
+    plt.savefig('data_model_residual.pdf', bbox_inches='tight')
     plt.show()
 
 
-def plot_components(x, y, ux, uy, uz, params=None, profile=False, vmin=None, vmax=None):
+def plot_components(x, y, ux, uy, uz, params=None,vmin=None, vmax=None):
     '''
     show components of deformation, along with projection into LOS
     NOTE: also would be cool to plot 3D surface!
@@ -141,21 +150,21 @@ def plot_components(x, y, ux, uy, uz, params=None, profile=False, vmin=None, vma
     cb.set_label('cm')
 
     im1 = ax1.imshow(ux, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
-    ax1.quiver(x[::nx, ::ny], y[::nx, ::ny], ux[::nx, ::ny], np.zeros_like(uy)[::nx, ::ny])
+    #ax1.quiver(x[::nx, ::ny], y[::nx, ::ny], ux[::nx, ::ny], np.zeros_like(uy)[::nx, ::ny])
     ax1.set_title('EW Displacement, Ux')
     cb1 = plt.colorbar(im1, ax=ax1, orientation='horizontal')  # , pad=0.1)
     cb1.set_label('cm')
 
     im2 = ax2.imshow(uy, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
-    ax2.quiver(x[::nx, ::ny], y[::nx, ::ny], np.zeros_like(ux)[::nx, ::ny], uy[::nx, ::ny])
+    #ax2.quiver(x[::nx, ::ny], y[::nx, ::ny], np.zeros_like(ux)[::nx, ::ny], uy[::nx, ::ny])
     cb2 = plt.colorbar(im2, ax=ax2, orientation='horizontal')  # , pad=0.1)
     ax2.set_title('NS Displacement, Uy')
     cb2.set_label('cm')
 
     # Add crosshair grid:
     for a in (ax, ax1, ax2):
-        a.axhline(linestyle=':', color='w')
-        a.axvline(linestyle=':', color='w')
+        a.axhline(linestyle=':', color='k')
+        a.axvline(linestyle=':', color='k')
 
     if params:
         plot_fault((ax, ax1, ax2), **params)
@@ -163,10 +172,9 @@ def plot_components(x, y, ux, uy, uz, params=None, profile=False, vmin=None, vma
     plt.suptitle('Components of Deformation', fontsize=16, fontweight='bold')
 
 
-def plot_los(x, y, ux, uy, uz, los, params, profile=False):
+def plot_los(x, y, ux, uy, uz, los, params,cmap='jet'):
     ''' Separate figure showing displacement and Wrapped Phase in Radar     '''
     # Convert to km and cm for ploting
-    cmap='bwr'
     x,y = np.array([x,y]) * 1e-3
     ux,uy,uz,los = np.array([ux,uy,uz,los]) * 1e2
 
@@ -175,15 +183,16 @@ def plot_los(x, y, ux, uy, uz, los, params, profile=False):
     ald = params['ald']
     wavelength = params['wavelength']
 
-    # Set view
-    nx=20
-    ny=20
+    # Set view & reduce number of quiver arrows
+    nx=10
+    ny=10
     extent = [x.min(), x.max(), y.min(), y.max()]
 
     # --------------
     fig, (ax,ax1,ax2) = plt.subplots(1,3,subplot_kw=dict(aspect=1.0, adjustable='box-forced'),sharex=True, sharey=True, figsize=(17,6))
     # vertical displacement w/ horizontal vectors # NOTE: add quiver scale arrow!
     im = ax.imshow(uz, extent=extent, cmap=cmap)
+    #ax1.quiver(x[::nx, ::ny], y[::nx, ::ny], ux[::nx, ::ny], np.zeros_like(uy)[::nx, ::ny]) #From above
     ax.quiver(x[::nx,::ny], y[::nx,::ny], ux[::nx,::ny], uy[::nx,::ny])
     ax.set_title('Model Displacement Field')
     ax.set_xlabel('EW Distance [km]')
@@ -200,40 +209,48 @@ def plot_los(x, y, ux, uy, uz, los, params, profile=False):
 
     # wrapped LOS - think about why this works...
     los_wrapped = np.remainder(los - los.min(), wavelength/2.0) / (wavelength/2.0)
-    im = ax2.imshow(los_wrapped, extent=extent, cmap='viridis', vmin=0, vmax=1)
+    im = ax2.imshow(los_wrapped, extent=extent, cmap='jet', vmin=0, vmax=1)
     plot_los_indicator(ax2,ald)
     ax2.set_title('LOS Wrapped')
     cb = plt.colorbar(im, ax=ax2, orientation='horizontal', ticks=[], pad=0.1) #ticks=MaxNLocator(nbins=5) #5 ticks only)
     cb.set_label('{0} cm'.format(wavelength/2)) #1 color cycle = lambda/2
 
-    plot_fault(fig,**params)
-
+    axes = (ax,ax1,ax2)
+    plot_fault(axes, **params)
     # Add crosshair grid:
-    for a in (ax,ax1,ax2):
-        a.axhline(linestyle=':', color='w')
-        a.axvline(linestyle=':', color='w')
+    for a in axes:
+        a.axhline(linestyle=':', color='k')
+        a.axvline(linestyle=':', color='k')
 
     plt.suptitle('Model in Radar Line of Sight', fontsize=16, fontweight='bold')
 
 
-def plot_profile(ind,ux,uy,uz,los,axis=0):
+def plot_profile(x,y,ind,ux,uy,uz,los,axis=0,extent=None):
     ''' straight line profile through specified axis of ux,uy,uz,los'''
     # Show profile line in separate LOS plot
+    # Convert to km and cm for ploting
+    x,y = np.array([x,y]) * 1e-3
+    ux,uy,uz,los = np.array([ux,uy,uz,los]) * 1e2
+
+    extent = [x.min(), x.max(), y.min(), y.max()]
     plt.figure()
-    plt.imshow(los, cmap='bwr')
+    plt.imshow(los, cmap='bwr',extent=extent)
     if axis == 0:
-        plt.axhline(ind,color='k', lw=2)
+        plt.axhline(y[ind],color='k', lw=2)
         # plt.annotate('A',(ind,0))
     else:
-        plt.vline(ind,color='k', lw=2)
+        print(x[ind])
+        plt.axvline(x[ind],color='k', lw=2)
     plt.title('Profile line')
 
 
     # Convert to km and cm for ploting
     # x,y = np.array([x,y]) * 1e-3
-    ux,uy,uz,los = np.array([ux,uy,uz,los]) * 1e2
+    #ux,uy,uz,los = np.array([ux,uy,uz,los]) * 1e2
+    dist = x
 
     if axis==1:
+        dist = y
         ux,uy,uz,los = [x.T for x in [ux,uy,uz,los]]
 
     # extract profiles
@@ -242,31 +259,31 @@ def plot_profile(ind,ux,uy,uz,los,axis=0):
     uz_p = uz[ind]
     los_p = los[ind]
 
-    fig, (ax,ax1,ax2,ax3) = plt.subplots(1,4,sharex=True, sharey=True, figsize=(17,6))
-    ax.plot(ux_p,'k.-',lw=2)
+    fig, axes = plt.subplots(2,2,sharex=True, sharey=True, figsize=(17,6))
+    ax = axes.flat[0]
+    ax.plot(dist, ux_p,'k.-',lw=2)
     ax.set_title('Ux')
     ax.set_ylabel('Displacement [cm]')
     ax.set_xlabel('Distance [km]')
-    ax.text(0,0.9,'A',fontweight='bold',ma='center',transform=ax.transAxes)
-    ax.text(0.9,0.9,'B',fontweight='bold',ma='center',transform=ax.transAxes)
+    #ax.text(0,0.9,'A',fontweight='bold',ma='center',transform=ax.transAxes)
+    #ax.text(0.9,0.9,'B',fontweight='bold',ma='center',transform=ax.transAxes)
 
-    ax1.plot(uy_p,'k.-',lw=2)
-    ax1.set_title('Uy')
+    ax = axes.flat[1]
+    ax.plot(dist, uy_p,'k.-',lw=2)
+    ax.set_title('Uy')
+    ax = axes.flat[2]
+    ax.plot(dist, uz_p,'k.-',lw=2)
+    ax.set_title('Uz')
+    ax = axes.flat[3]
+    ax.plot(dist, los_p,'k.-',lw=2)
+    ax.set_title('LOS')
 
-    ax2.plot(uz_p,'k.-',lw=2)
-    ax2.set_title('Uz')
-
-    ax3.plot(los_p,'k.-',lw=2)
-    ax3.set_title('LOS')
-
-    for a in (ax,ax1,ax2,ax3):
-        a.axhline(0,color='gray',linestyle='--')
-        a.axvline(ind,color='gray',linestyle='--')
-        a.grid(True)
+    for ax in axes.flat:
+        ax.grid(True)
 
     # ratio of uz to ur
     # NOTE: just print max ratio
-    print('Ur/Uz = ', ux_p.max() / uz_p.max())
+    print('Ur_max/Uz_max (along profile)= ', ux_p.max() / uz_p.max())
     '''
     plt.figure()
     plt.plot(uz_p/ux_p,'k.-',lw=2)

@@ -18,7 +18,7 @@ def world2rc(x,y,affine, inverse=False):
     T1 = T0 * rasterio.Affine.translation(0.5, 0.5)
     rc2xy = lambda r, c: (c, r) * T1
     # can probable simpligy,,, also int() acts like floor()
-    xy2rc = lambda x, y: [int(i) for i in [x, y] * ~T1][::-1] 
+    xy2rc = lambda x, y: [int(i) for i in [x, y] * ~T1][::-1]
 
     if inverse:
         return rc2xy(y,x)
@@ -35,7 +35,7 @@ def save_rasterio(path, data, profile):
     with rasterio.drivers():
         with rasterio.open(path, 'w', **profile) as dst:
             dst.write(data, 1) #single band
-    
+
 
 def load_rasterio(path):
     '''
@@ -63,9 +63,9 @@ def load_cor_mask(path='phsig.cor.8alks_8rlks.geo.vrt', corthresh=0.1):
     # Can go further and remove pixels with low coherence (or just set to 0.0)
     mask = (cor < corthresh)
     #data[mask] = np.nan
-    
+
     return mask
-    
+
 
 def calc_ramp(array, ramp='quadratic', custom_mask=None):
     '''
@@ -113,7 +113,7 @@ def calc_ramp(array, ramp='quadratic', custom_mask=None):
             print('{}: Unable to fit ramp with np.linalg.lstsq'.format(ex))
 
     elif ramp == 'dc':
-        G = np.ones_like(phs)
+        G = np.ones_like(array)
         m = np.mean(phs)
         print('fit dc offset')
 
@@ -124,8 +124,8 @@ def calc_ramp(array, ramp='quadratic', custom_mask=None):
 
 
 def get_cart2los(incidence,heading):
-    ''' 
-    coefficients for projecting cartesian displacements into LOS vector 
+    '''
+    coefficients for projecting cartesian displacements into LOS vector
     '''
     incidence = np.deg2rad(incidence)
     heading = np.deg2rad(heading)
@@ -154,8 +154,8 @@ def pol2cart(theta,r):
 
 
 def shift_utm(X,Y,xcen,ycen):
-    ''' 
-    Avoid large numbers in UTM grid by creating local (0,0) origin 
+    '''
+    Avoid large numbers in UTM grid by creating local (0,0) origin
     '''
     x0 = X.min()
     y0 = Y.min()
@@ -192,5 +192,3 @@ def get_cart2los_bak(inc, ald, x):
     cart2los = -np.dstack([EW2los, NS2los, Z2los])
 
     return cart2los
-
-
