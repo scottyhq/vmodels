@@ -76,6 +76,14 @@ def forward(x, y, xcen=0, ycen=0,
 
     return ue,un,uz
 
+def invert(xargs, xoff, yoff,depth,dip,length,width,slip,strike,rake):
+    X,Y,incidence,heading = xargs
+    nu=0.25
+    ux,uy,uz=forward(X,Y,xoff,yoff,depth,length,width,slip,0,strike,dip,rake)
+    dataVec = np.dstack([ux, uy, uz])
+    cart2los = util.get_cart2los2(incidence,heading)
+    los = np.sum(dataVec * cart2los, axis=2)
+    return los.ravel()
 
 def chinnery(f, x, p, L, W, q, dip, nu):
     '''Chinnery's notation [equation (24) p. 1143]'''
