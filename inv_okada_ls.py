@@ -80,10 +80,10 @@ losguess1=losguess[valids&valid]
 #bounds=[[172000,80000,0.1e3,0,2e3,0.5e3,0,0,0],[174000,90000,5e3,60,10e3,7e3,10,360,360]]
 
 #Bounded:
-#popt,pcov = scipy.optimize.curve_fit(vmodels.okada.invert, xargs, data, p0=initial_guess, method='trf',bounds=bounds)
+#popt,pcov = scipy.optimize.curve_fit(okada.invert, xargs, data, p0=initial_guess, method='trf',bounds=bounds)
 
 #Unbounded:
-popt,pcov,info,mes,flag = scipy.optimize.curve_fit(vmodels.okada.invert, xargs, data, p0=initial_guess,full_output=True)
+popt,pcov,info,mes,flag = scipy.optimize.curve_fit(okada.invert, xargs, data, p0=initial_guess,full_output=True)
 
 resultDict = OrderedDict([('xoff',popt[0]),
             ('yoff',popt[1]),
