@@ -58,7 +58,7 @@ ux,uy,uz = okada.forward(X,Y,**params)
 dataVec = np.dstack([ux, uy, uz])
 
 # Get LOS transform
-cart2los = util.get_cart2los2(incidence,heading)
+cart2los = util.get_cart2los(incidence,heading)
 losguess = np.sum(dataVec * cart2los, axis=2)
 
 #Initial guess for the least squares inversion
@@ -153,7 +153,7 @@ losfinal = np.sum(dataVec * cart2los, axis=2)
 
 #Writing the results in a csv file
 df = pd.DataFrame(resultDict, index=[0])
-df.to_csv('mogi_inversion.csv', index=False)
+df.to_csv('okada_inversion.csv', index=False)
 
 #Plot of Okada model with the initial guess
 plt.figure(1)
