@@ -4,6 +4,10 @@ dislocation defined by 'slip' and 'rake' for rectangular fault defined by
 orientation 'strike' and 'dip', and size 'length' an 'width'. The fault
 centroid is located (0,0,-depth). Equations from Okada 1985 & 1992 BSSA.
 
+strike, dip and rake according to the conventions set forth by
+Aki and Richards (1980), Quantitative Seismology, Vol. 1.
+rake=0 --> left-lateral strike slip.
+
 strike:  Clockwise with respect to north [degrees]
 dip: Angle from horizontal, to right side facing strike direction [dip]
 rake: Counter-clockwise relative to strike

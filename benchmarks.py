@@ -309,7 +309,7 @@ def okada_elastic(example='sill'):
     #            nu=0.27)
     # #north-south orientation, dipping 30 E, must set rake westward thrust
     # I think it is counter clock wise positive relative to stike
-    elif example == 'thrust': 
+    elif example == 'thrust':
         params = dict(xcen=0, ycen=0,
                 depth=5e3, length=1e3, width=1e3,
                 slip=10.0, opening=0.0,
@@ -318,8 +318,8 @@ def okada_elastic(example='sill'):
     elif example == 'normal': #Note change in sign for slip
         params = dict(xcen=0, ycen=0,
                 depth=5e3, length=1e3, width=1e3,
-                slip=-10.0, opening=0.0,
-                strike=0.0, dip=60.0, rake=90.0,
+                slip=10.0, opening=0.0,
+                strike=0.0, dip=60.0, rake=-90.0,
                 nu=0.25)
     elif example == 'mario': #right-lateral, strike at 45
         params = dict(xcen=0, ycen=0,
@@ -327,6 +327,7 @@ def okada_elastic(example='sill'):
                 slip=-10.0, opening=0.0,
                 strike=45.0, dip=90.0, rake=0.0,
                 nu=0.25)
+    print(params)
     # Make grid NOTE: odd number so that center is symmetrical
     n = 201
     mid = int(n/2) #profile position
@@ -347,11 +348,11 @@ def okada_elastic(example='sill'):
     plt.quiver(X[::nx, ::ny]/1e3, Y[::nx, ::ny]/1e3,
                ux[::nx, ::ny], uy[::nx, ::ny],
                 units='x', color='w')
-    
+
     plt.axhline(y[mid]/1e3, color='k')
     plt.axvline(x[mid]/1e3, color='r', linestyle='dashed')
     plt.axhline(y[mid]/1e3, color='b', linestyle='dotted', lw=2)
-    
+
     plt.title('Okada profiles')
     plt.xlabel('Easting [km]')
     plt.ylabel('Northing [km]')
@@ -363,7 +364,7 @@ def okada_elastic(example='sill'):
     plt.plot(x/1e3,uz[mid,:], 'k-', lw=2, label='vertical')
     plt.plot(x/1e3,ux[mid,:], 'b:', lw=2, label='ux', markevery=3)
     plt.plot(y/1e3,uy[:,mid], 'r--', lw=2, label='uy')
-    
+
     plt.axhline(color='k')
     plt.axvline(color='k')
     #plt.axhline(0.5, color='k', linestyle='dashed')

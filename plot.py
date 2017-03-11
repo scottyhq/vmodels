@@ -9,6 +9,9 @@ NOTE: Currently set up for plotting Okada
 """
 import matplotlib.pyplot as plt
 import numpy as np
+#import pandas as pd
+
+# Add some generic plotting functions for re-use?
 
 
 def plot_fault(axes, strike=None, dip=None, length=None, width=None, xcen=None, ycen=None, **kwargs):
@@ -120,6 +123,10 @@ def plot_data_model_residual(data, model, extent, row, northing,
     plt.savefig('data_model_residual.pdf', bbox_inches='tight')
     plt.show()
 
+def get_clim(data):
+    vmax = np.nanmax(np.abs(data))
+    vmin = -vmax
+    return vmin, vmax
 
 def plot_components(x, y, ux, uy, uz, params=None,vmin=None, vmax=None):
     '''
@@ -142,6 +149,8 @@ def plot_components(x, y, ux, uy, uz, params=None,vmin=None, vmax=None):
 
     extent = [x.min(), x.max(), y.min(), y.max()] #left, right, bottom, top
 
+    #normalize colorscale
+    vmin, vmax = get_clim(uz)
     im = ax.imshow(uz, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
     ax.set_title('Vertical Displacement, Uz')
     ax.set_xlabel('EW Distance [km]')
@@ -149,12 +158,14 @@ def plot_components(x, y, ux, uy, uz, params=None,vmin=None, vmax=None):
     cb = plt.colorbar(im, ax=ax, orientation='horizontal')
     cb.set_label('cm')
 
+    vmin, vmax = get_clim(ux)
     im1 = ax1.imshow(ux, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
     #ax1.quiver(x[::nx, ::ny], y[::nx, ::ny], ux[::nx, ::ny], np.zeros_like(uy)[::nx, ::ny])
     ax1.set_title('EW Displacement, Ux')
     cb1 = plt.colorbar(im1, ax=ax1, orientation='horizontal')  # , pad=0.1)
     cb1.set_label('cm')
 
+    vmin, vmax = get_clim(uy)
     im2 = ax2.imshow(uy, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
     #ax2.quiver(x[::nx, ::ny], y[::nx, ::ny], np.zeros_like(ux)[::nx, ::ny], uy[::nx, ::ny])
     cb2 = plt.colorbar(im2, ax=ax2, orientation='horizontal')  # , pad=0.1)
