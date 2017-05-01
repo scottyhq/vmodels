@@ -29,7 +29,7 @@ def invert(xargs,xcen,ycen,depth,dV):
     los = -np.sum(dataVec * cart2los, axis=2)
 
     return los.ravel()
-    
+
 
 def invert_varres(xargs,xcen,ycen,depth,dV):
     """
@@ -94,8 +94,7 @@ def invert_dipole_nuisance(xargs,xcen,ycen,depth,dV,xcen1,ycen1,depth1,dV1,rampx
 
 def forward(x,y,xcen=0,ycen=0,d=3e3,dV=1e6, nu=0.25):
     """
-    Calculates surface deformation based on point source
-
+    Calculates surface deformation based on point pressure source
     References: Mogi 1958, Segall 2010 p.203
 
     Args:
@@ -436,6 +435,11 @@ def calc_viscoshell_dPt(x,y,t,P0,tS,xcen=0,ycen=0,d=4e3,a=1000.0,b=1200.0,
     print('ur_max = {:.4f}'.format(ur.max()))
 
     return ur, uz, P
+
+def calc_uzmax(dP=10e6,a=5e2,d=3e3,mu=30e9,nu=0.25):
+    uzmax = ((1-nu)*dP*a**3) / (mu*d**2)
+    return uzmax
+
 
 def dP2dV(dP,a,mu=30e9):
     dV = (np.pi * dP * a**3) / mu

@@ -24,6 +24,9 @@ opening: positive tensile dislocation [meters]
 x,y: coordinate grid [meters]
 xcen, ycen: epicenter of fault centroid
 nu: poisson ratio [unitless]
+
+* tanslated from matlab code by Francois Beauducel
+#https://www.mathworks.com/matlabcentral/fileexchange/25982-okada--surface-deformation-due-to-a-finite-rectangular-source
 '''
 
 from __future__ import division
@@ -41,10 +44,8 @@ def forward(x, y, xcen=0, ycen=0,
     '''
     Calculate surface displacements for Okada85 dislocation model
     '''
-    e = x
-    n = y
-    x = x - xcen
-    y = y - ycen
+    e = x - xcen
+    n = y - ycen
 
     #strike = np.deg2rad(90 - strike) #to be relative to N, instead of E
     strike = np.deg2rad(strike) #transformations accounted for below
@@ -58,7 +59,7 @@ def forward(x, y, xcen=0, ycen=0,
     U2 = np.sin(rake) * slip
     U3 = opening
 
-    d = depth + np.sin(dip) * W / 2
+    d = depth + np.sin(dip) * W / 2 #fault top edge
     ec = e + np.cos(strike) * np.cos(dip) * W / 2
     nc = n - np.sin(strike) * np.cos(dip) * W / 2
     x = np.cos(strike) * nc + np.sin(strike) * ec + L / 2
@@ -69,12 +70,15 @@ def forward(x, y, xcen=0, ycen=0,
     ux = - U1 / (2 * np.pi) * chinnery(ux_ss, x, p, L, W, q, dip, nu) - \
            U2 / (2 * np.pi) * chinnery(ux_ds, x, p, L, W, q, dip, nu) + \
            U3 / (2 * np.pi) * chinnery(ux_tf, x, p, L, W, q, dip, nu)
+
     uy = - U1 / (2 * np.pi) * chinnery(uy_ss, x, p, L, W, q, dip, nu) - \
            U2 / (2 * np.pi) * chinnery(uy_ds, x, p, L, W, q, dip, nu) + \
            U3 / (2 * np.pi) * chinnery(uy_tf, x, p, L, W, q, dip, nu)
+
     uz = - U1 / (2 * np.pi) * chinnery(uz_ss, x, p, L, W, q, dip, nu) - \
            U2 / (2 * np.pi) * chinnery(uz_ds, x, p, L, W, q, dip, nu) + \
            U3 / (2 * np.pi) * chinnery(uz_tf, x, p, L, W, q, dip, nu)
+
     ue = np.sin(strike) * ux - np.cos(strike) * uy
     un = np.cos(strike) * ux + np.sin(strike) * uy
 
@@ -91,10 +95,10 @@ def invert(xargs, xoff, yoff,depth,dip,length,width,slip,strike,rake):
 
 def chinnery(f, x, p, L, W, q, dip, nu):
     '''Chinnery's notation [equation (24) p. 1143]'''
-    u = ( f(x, p, q, dip, nu) -
+    u =  (f(x, p, q, dip, nu) -
           f(x, p - W, q, dip, nu) -
           f(x - L, p, q, dip, nu) +
-          f(x - L, p - W, q, dip, nu) )
+          f(x - L, p - W, q, dip, nu))
     return u
 
 
@@ -154,20 +158,20 @@ def uz_ds(xi, eta, q, dip, nu):
 
 
 def ux_tf(xi, eta, q, dip, nu):
-    R = np.sqrt(xi ** 2 + eta ** 2 + q ** 2)
-    u = q ** 2 / (R * (R + eta)) - \
-        I3(eta, q, dip, nu, R) * (np.sin(dip) ** 2)
+    R = np.sqrt(xi**2 + eta**2 + q**2)
+    u = q**2 / (R * (R + eta)) - \
+        (I3(eta, q, dip, nu, R) * np.sin(dip)**2)
     return u
 
 
 def uy_tf(xi, eta, q, dip, nu):
-    R = np.sqrt(xi ** 2 + eta ** 2 + q ** 2)
+    R = np.sqrt(xi**2 + eta**2 + q**2)
     u = - (eta * np.sin(dip) - q * np.cos(dip)) * q / (R * (R + xi)) - \
-        np.sin(dip) * xi * q / (R * (R + eta)) - \
-        I1(xi, eta, q, dip, nu, R) * (np.sin(dip) ** 2)
+        (np.sin(dip) * xi * q / (R * (R + eta))) - \
+        (I1(xi, eta, q, dip, nu, R) * np.sin(dip) ** 2)
     k = (q != 0)
     #u[k] = u[k] + np.sin(dip) * np.arctan2(xi[k] * eta[k] , q[k] * R[k])
-    u[k] = u[k] + np.sin(dip) * np.arctan( (xi[k] * eta[k]) , (q[k] * R[k]) )
+    u[k] = u[k] + np.sin(dip) * np.arctan( (xi[k] * eta[k]) / (q[k] * R[k]) )
     return u
 
 
@@ -177,7 +181,7 @@ def uz_tf(xi, eta, q, dip, nu):
     u = (eta * np.cos(dip) + q * np.sin(dip)) * q / (R * (R + xi)) + \
          np.cos(dip) * xi * q / (R * (R + eta)) - \
          I5(xi, eta, q, dip, nu, R, db) * np.sin(dip)**2
-    k = (q != 0) #not at depth=0?
+    k = (q != 0)
     u[k] = u[k] - np.cos(dip) * np.arctan( (xi[k] * eta[k]) / (q[k] * R[k]) )
     return u
 
@@ -186,10 +190,9 @@ def I1(xi, eta, q, dip, nu, R):
     db = eta * np.sin(dip) - q * np.cos(dip)
     if np.cos(dip) > eps:
         I = (1 - 2 * nu) * (- xi / (np.cos(dip) * (R + db))) - \
-            np.sin(dip) / np.cos(dip) * \
-            I5(xi, eta, q, dip, nu, R, db)
+            np.sin(dip) / np.cos(dip) * I5(xi, eta, q, dip, nu, R, db)
     else:
-        I = -(1 - 2 * nu) / 2 * xi * q / (R + db) ** 2
+        I = -(1 - 2 * nu)/2 * xi * q / (R + db)**2
     return I
 
 
@@ -204,8 +207,7 @@ def I3(eta, q, dip, nu, R):
     db = eta * np.sin(dip) - q * np.cos(dip)
     if np.cos(dip) > eps:
         I = (1 - 2 * nu) * (yb / (np.cos(dip) * (R + db)) - np.log(R + eta)) + \
-            np.sin(dip) / np.cos(dip) * \
-            I4(db, eta, q, dip, nu, R)
+            np.sin(dip) / np.cos(dip) * I4(db, eta, q, dip, nu, R)
     else:
         I = (1 - 2 * nu) / 2 * (eta / (R + db) + yb * q / (R + db) ** 2 - np.log(R + eta))
     return I

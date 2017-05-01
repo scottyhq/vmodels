@@ -10,12 +10,12 @@ NOTE: Currently set up for plotting Okada
 import matplotlib.pyplot as plt
 import numpy as np
 #import pandas as pd
-
+import matplotlib.patches as patches
 # Add some generic plotting functions for re-use?
 
 
-def plot_fault(axes, strike=None, dip=None, length=None, width=None, xcen=None, ycen=None, **kwargs):
-    ''' Project fault plane onto surface'''
+def plot_fault_old(axes, strike=None, dip=None, length=None, width=None, xcen=None, ycen=None, **kwargs):
+    ''' Project fault plane onto surface - correct for depth to top of fault?'''
     # Project fault coordinates onto surface
     sins = np.sin(np.deg2rad(strike))
     coss = np.cos(np.deg2rad(strike))
@@ -41,12 +41,57 @@ def plot_fault(axes, strike=None, dip=None, length=None, width=None, xcen=None, 
         #ax.plot([xcen, ], [ycen, ])# add tick at midpoint indicating dip
         # multiple distance times direction perpendicular to stike
 
-def plot_fault3d(axes, strike=None, dip=None, length=None, width=None, xcen=None, ycen=None, **kwargs):
-    ''' Rotatable fault in 3d'''
-    from mpl_toolkits.mplot3d import Axes3D
+def draw_fault(ax, params):
+    ''' Project fault plane onto surface - correct for depth to top of fault?'''
+    # Project fault coordinates onto surface
+    strike = np.deg2rad(params['strike'])
+    alpha = np.pi/2 - np.sin(strike)
+    dip = np.deg2rad(params['dip'])
+    rake = np.deg2rad(params['rake'])
+
+    L = params['length']
+    W = params['width']
+    d = params['depth'] + np.sin(dip) * W / 2 #fault top edge
+
+    x_fault = L/2 *np.cos(alpha)*np.array([-1,1,1,-1]) + np.sin(alpha)*np.cos(dip)*W/2*np.array([-1,-1,1,1])
+    y_fault = L/2 *np.sin(alpha)*np.array([-1,1,1,-1]) + np.cos(alpha)*np.cos(dip)*W/2*np.array([1,1,-1,-1])
+    z_fault = -d + np.sin(dip)*W*np.array([1,1,0,0])
+
+    verts = np.vstack([x_fault,y_fault]).T #vertices
+    fault = patches.Polygon(verts, closed=True, facecolor='none')
+    ax.add_patch(fault)
+    ax.plot(x_fault[1], y_fault[1], 'ko') # Strike direction
+
+    # Displaced fault position
+    U1 = np.cos(rake) * params['slip']
+    U2 = np.sin(rake) * params['slip']
+    U3 = params['opening']
+    ddx = U1*np.cos(alpha) - U2*np.sin(alpha)*np.cos(dip) + U3*np.sin(alpha)*np.sin(dip)
+    ddy = U1*np.sin(alpha) + U2*np.cos(alpha)*np.cos(dip) - U3*np.cos(alpha)*np.sin(dip)
+    ddz = U2*np.sin(dip) + U3*np.cos(dip)
+    verts_hw = np.vstack([x_fault + ddx/2, y_fault + ddy/2]).T #vertices #hanging wall motion
+    fault_hw = patches.Polygon(verts_hw, closed=True, linestyle='dotted', facecolor='none')
+    ax.add_patch(fault_hw)
+    verts_fw = np.vstack([x_fault - ddx/2, y_fault - ddy/2]).T #vertices FOOT wall motion
+    fault_fw = patches.Polygon(verts_fw, closed=True, linestyle='dotted', facecolor='none')
+    ax.add_patch(fault_fw)
+
+
+def plot_fault3d(axes, params):
+    '''
+    Rotatable fault in 3d
+    http://stackoverflow.com/questions/4622057/plotting-3d-polygons-in-python-matplotlib
+    '''
+    from mpl_toolkits.mplot3d import axes3d
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    print('todo')
+    x = [0,1,1,0]
+    y = [0,0,1,1]
+    z = [0,1,0,1]
+    verts = [zip(x, y,z)]
+    ax.add_collection3d(Poly3DCollection(verts))
+    plt.show()
 
 
 def plot_los_indicator(ax, ald):
@@ -66,6 +111,7 @@ def plot_los_indicator(ax, ald):
     # arrowprops=dict(width=1,frac=0.3,headwidth=5,facecolor='black'),
     # fontweight='bold') # NOTE: imshow origin has effect on this
 
+
 def plot_data_model_residual(data, model, extent, row, northing,
                              vmin=None, vmax=None, unit='cm', point=None,
                              xlim=None, ylim=None, scale_residual=False):
@@ -73,8 +119,8 @@ def plot_data_model_residual(data, model, extent, row, northing,
     Data. Model, Residual with EW profile
     '''
     cmap = 'bwr'
-    extent = np.array(extent)/1e3
-    northing = northing/1e3
+    extent = np.array(extent)
+    northing = northing
 
     fig, axes = plt.subplots(2, 2, figsize=(10,10))
     ax = axes.flat[0]
@@ -106,7 +152,7 @@ def plot_data_model_residual(data, model, extent, row, northing,
     # Label Summit
     for ax in axes.flat[:3]:
         if point:
-            ax.plot(point[0]/1e3,point[1]/1e3,'k^',scalex=False,scaley=False)
+            ax.plot(point[0],point[1],'k^',scalex=False,scaley=False)
         if xlim:
             ax.set_xlim(xlim)
         if ylim:
@@ -128,16 +174,18 @@ def get_clim(data):
     vmin = -vmax
     return vmin, vmax
 
-def plot_components(x, y, ux, uy, uz, params=None,vmin=None, vmax=None):
+def plot_components(x, y, ux, uy, uz,
+                    params=None, plot_fault=False, vmin=None, vmax=None,
+                    clabel=''):
     '''
     show components of deformation, along with projection into LOS
     NOTE: also would be cool to plot 3D surface!
     # just pass all parameters
     '''
     cmap = 'bwr'
-    # Convert to km and cm for ploting
-    x, y = np.array([x, y]) * 1e-3
-    ux, uy, uz = np.array([ux, uy, uz]) * 1e2
+
+    x, y = np.array([x, y])
+    ux, uy, uz = np.array([ux, uy, uz])
 
     # step size for quiver plot resampling
     nx = 20
@@ -153,32 +201,33 @@ def plot_components(x, y, ux, uy, uz, params=None,vmin=None, vmax=None):
     vmin, vmax = get_clim(uz)
     im = ax.imshow(uz, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
     ax.set_title('Vertical Displacement, Uz')
-    ax.set_xlabel('EW Distance [km]')
-    ax.set_ylabel('NS Distance [km]')
+    ax.set_xlabel('EW Distance')
+    ax.set_ylabel('NS Distance')
     cb = plt.colorbar(im, ax=ax, orientation='horizontal')
-    cb.set_label('cm')
+    #cb.set_label('cm')
 
     vmin, vmax = get_clim(ux)
     im1 = ax1.imshow(ux, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
     #ax1.quiver(x[::nx, ::ny], y[::nx, ::ny], ux[::nx, ::ny], np.zeros_like(uy)[::nx, ::ny])
     ax1.set_title('EW Displacement, Ux')
     cb1 = plt.colorbar(im1, ax=ax1, orientation='horizontal')  # , pad=0.1)
-    cb1.set_label('cm')
+    cb1.set_label(clabel)
 
     vmin, vmax = get_clim(uy)
     im2 = ax2.imshow(uy, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
     #ax2.quiver(x[::nx, ::ny], y[::nx, ::ny], np.zeros_like(ux)[::nx, ::ny], uy[::nx, ::ny])
     cb2 = plt.colorbar(im2, ax=ax2, orientation='horizontal')  # , pad=0.1)
     ax2.set_title('NS Displacement, Uy')
-    cb2.set_label('cm')
+    #cb2.set_label('cm')
 
     # Add crosshair grid:
     for a in (ax, ax1, ax2):
         a.axhline(linestyle=':', color='k')
         a.axvline(linestyle=':', color='k')
 
-    if params:
-        plot_fault((ax, ax1, ax2), **params)
+    if plot_fault:
+        for ax in (ax, ax1, ax2):
+            draw_fault(ax, params)
 
     plt.suptitle('Components of Deformation', fontsize=16, fontweight='bold')
 
@@ -186,8 +235,8 @@ def plot_components(x, y, ux, uy, uz, params=None,vmin=None, vmax=None):
 def plot_los(x, y, ux, uy, uz, los, params,cmap='jet'):
     ''' Separate figure showing displacement and Wrapped Phase in Radar     '''
     # Convert to km and cm for ploting
-    x,y = np.array([x,y]) * 1e-3
-    ux,uy,uz,los = np.array([ux,uy,uz,los]) * 1e2
+    x,y = np.array([x,y])
+    ux,uy,uz,los = np.array([ux,uy,uz,los])
 
     # extract a few varialbes from params dictionary
     inc = params['inc']
@@ -239,9 +288,8 @@ def plot_los(x, y, ux, uy, uz, los, params,cmap='jet'):
 def plot_profile(x,y,ind,ux,uy,uz,los,axis=0,extent=None):
     ''' straight line profile through specified axis of ux,uy,uz,los'''
     # Show profile line in separate LOS plot
-    # Convert to km and cm for ploting
-    x,y = np.array([x,y]) * 1e-3
-    ux,uy,uz,los = np.array([ux,uy,uz,los]) * 1e2
+    x,y = np.array([x,y])
+    ux,uy,uz,los = np.array([ux,uy,uz,los])
 
     extent = [x.min(), x.max(), y.min(), y.max()]
     plt.figure()
