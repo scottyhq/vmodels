@@ -45,7 +45,7 @@ def draw_fault(ax, params):
     ''' Project fault plane onto surface - correct for depth to top of fault?'''
     # Project fault coordinates onto surface
     strike = np.deg2rad(params['strike'])
-    alpha = np.pi/2 - np.sin(strike)
+    alpha = np.pi/2 - strike
     dip = np.deg2rad(params['dip'])
     rake = np.deg2rad(params['rake'])
 
@@ -53,14 +53,14 @@ def draw_fault(ax, params):
     W = params['width']
     d = params['depth'] + np.sin(dip) * W / 2 #fault top edge
 
-    x_fault = L/2 *np.cos(alpha)*np.array([-1,1,1,-1]) + np.sin(alpha)*np.cos(dip)*W/2*np.array([-1,-1,1,1])
-    y_fault = L/2 *np.sin(alpha)*np.array([-1,1,1,-1]) + np.cos(alpha)*np.cos(dip)*W/2*np.array([1,1,-1,-1])
+    x_fault = params['xcen'] + L/2 *np.cos(alpha)*np.array([-1,1,1,-1]) + np.sin(alpha)*np.cos(dip)*W/2*np.array([-1,-1,1,1])
+    y_fault = params['ycen'] + L/2 *np.sin(alpha)*np.array([-1,1,1,-1]) + np.cos(alpha)*np.cos(dip)*W/2*np.array([1,1,-1,-1])
     z_fault = -d + np.sin(dip)*W*np.array([1,1,0,0])
 
     verts = np.vstack([x_fault,y_fault]).T #vertices
-    fault = patches.Polygon(verts, closed=True, facecolor='none')
+    fault = patches.Polygon(verts, closed=True, edgecolor='k', facecolor='none')
     ax.add_patch(fault)
-    ax.plot(x_fault[1], y_fault[1], 'ko') # Strike direction
+    ax.plot(x_fault[1], y_fault[1], 'ko') # Strike indicator
 
     # Displaced fault position
     U1 = np.cos(rake) * params['slip']
@@ -82,23 +82,14 @@ def plot_fault3d(axes, params):
     Rotatable fault in 3d
     http://stackoverflow.com/questions/4622057/plotting-3d-polygons-in-python-matplotlib
     '''
-    from mpl_toolkits.mplot3d import axes3d
-    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    x = [0,1,1,0]
-    y = [0,0,1,1]
-    z = [0,1,0,1]
-    verts = [zip(x, y,z)]
-    ax.add_collection3d(Poly3DCollection(verts))
-    plt.show()
+    print('TODO')
 
 
 def plot_los_indicator(ax, ald):
     ''' Add LOS arrow indicator in axes coordinates
     Inputs:
         ax     axes to add to
-        ald    azimuth look direction (second array in geo_incidence
+        ald    azimuth look direction
     '''
     L = 0.1
     x0, y0 = (0.8, 0.8)
@@ -188,8 +179,8 @@ def plot_components(x, y, ux, uy, uz,
     ux, uy, uz = np.array([ux, uy, uz])
 
     # step size for quiver plot resampling
-    nx = 20
-    ny = 20
+    #nx = 20
+    #ny = 20
 
     fig, (ax, ax1, ax2) = plt.subplots(1, 3,
                                 subplot_kw=dict(aspect=1.0, adjustable='box-forced'),
@@ -221,9 +212,11 @@ def plot_components(x, y, ux, uy, uz,
     #cb2.set_label('cm')
 
     # Add crosshair grid:
-    for a in (ax, ax1, ax2):
-        a.axhline(linestyle=':', color='k')
-        a.axvline(linestyle=':', color='k')
+    #for a in (ax, ax1, ax2):
+    #    xcen = (x.max() - x.min())/2
+    #    ycen = (y.max() - y.min())/2
+    #    a.axhline(ycen, linestyle=':', color='k')
+    #    a.axvline(xcen, linestyle=':', color='k')
 
     if plot_fault:
         for ax in (ax, ax1, ax2):

@@ -47,7 +47,19 @@ def forward(x, y, xcen=0, ycen=0,
     e = x - xcen
     n = y - ycen
 
-    #strike = np.deg2rad(90 - strike) #to be relative to N, instead of E
+    # A few basic parameter checks
+    if not (0.0 <= strike <= 360.0) or not (0 <= dip <= 90):
+        print('Please use 0<strike<360 clockwise from North')
+        print('And 0<dip<90 East of strike convention')
+        raise ValueError
+    # Don't allow faults that prech the surface
+    d_crit = width/2 * np.sin(np.deg2rad(dip))
+    assert depth >= d_crit, 'depth must be greater than {}'.format(d_crit)
+    assert length >=0, 'fault length must be positive'
+    assert width >=0, 'fault length must be positive'
+    assert rake <= 180, 'rake should be:  rake <= 180'
+    assert -1.0 <= nu <= 0.5, 'Poisson ratio should be: -1 <= nu <= 0.5'
+
     strike = np.deg2rad(strike) #transformations accounted for below
     dip = np.deg2rad(dip)
     rake = np.deg2rad(rake)

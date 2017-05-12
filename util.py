@@ -13,6 +13,7 @@ def world2rc(x,y,affine, inverse=False):
     '''
     World coordinates (lon,lat) to image (row,col) center pixel coordinates
     '''
+    #NOTE: src.xy() does this I think...
     #T0 = src.meta['affine']
     T0 = affine
     T1 = T0 * rasterio.Affine.translation(0.5, 0.5)
@@ -122,17 +123,49 @@ def calc_ramp(array, ramp='quadratic', custom_mask=None):
 
     return ramp
 
+def get_enu2los(enuFile='enu.rdr.geo'):
+    '''
+    Get conversion of cartesian ground displacements to radar LOS
+
+    To avoid incidence and heading convention issues, assume 3 band GDAL file with
+    conversion factors. Convension used is RECENT MASTER - OLDER SLAVE such that
+    positive phase in interferogram is uplift.
+
+    Example:
+    model = np.array([ux,uy,uz])
+    enu2los = get_enu2los('enu.rdr.geo')
+    dlos = model*enu2los
+
+    To generate this file with ISCE:
+    imageMath.py --eval='sin(rad(a_0))*cos(rad(a_1+90)); sin(rad(a_0)) * sin(rad(a_1+90)); cos(rad(a_0))' --a=los.rdr.geo -t FLOAT -s BIL -o enu.rdr.geo
+    imageMath.py --eval='a_0*b_0;a_1*b_1;a_2*b_2' --a=enu.rdr.geo --b=model.geo -t FLOAT -o model_LOS.geo
+    '''
+    data,junk,junk = util.load_rasterio(enuFile)
+    data[data==0] = np.nan
+    e2los,n2los,u2los = data
+    # NOTE: some sort of bug in conversion code why is there z=1 in z2los
+    u2los[u2los==1] = np.nan
+
+    cart2los = np.dstack([e2los, n2los, u2los])
+    return cart2los
+
 
 def get_cart2los(incidence,heading):
     '''
     coefficients for projecting cartesian displacements into LOS vector
+    assuming convention of Hannsen text figure 5.1 where angles are clockwise +
+    relative to north!
+    is Azimuth look direction (ALD=heading-270)
+    vm.util.get_cart2los(23,190)
+
+    ISCE descending los file has heading=-100
     '''
     incidence = np.deg2rad(incidence)
-    heading = np.deg2rad(heading)
+    ALD = np.deg2rad(heading-270)
 
-    EW2los = np.sin(heading) * np.sin(incidence)
-    NS2los = np.cos(heading) * np.sin(incidence)
-    Z2los = -np.cos(incidence)
+    EW2los = -np.sin(ALD) * np.sin(incidence)
+    NS2los = -np.cos(ALD) * np.sin(incidence)
+    Z2los = np.cos(incidence)
 
     cart2los = np.dstack([EW2los, NS2los, Z2los])
 
